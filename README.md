@@ -34,7 +34,7 @@ pip install -r requirements.txt
 ```
 
 ### docker container
-`docker run -it -p 6006:6006 --gpus=all -v $PWD:/workdir dr4thmos/lsg-gpu:0.1`
+`docker run -it -p 6006:6006 --gpus=all -v $PWD:/workdir gitlab.neanias.eu:5050/s3-service/latent-space-explorer/generator/lsg-gpu:0.1`
 
 ## Data
 Data are intended to be produced by the repo "data-converter" as a folder containing a numpy file per source, in a structure like that:
