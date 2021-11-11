@@ -1,0 +1,83 @@
+[
+  {
+    "name": "cae",
+    "image": {
+      "dim": 64,
+      "channels": 14,
+      "preview": {
+        "r": 10,
+        "g": 2,
+        "b": 4
+      }
+    },
+    "dataset": {
+      "split_threshold": 0.8,
+      "augmentation_threshold": 0.5
+    },
+    "architecture": {
+      "name": "cae",
+      "filters": [32, 64, 128],
+      "latent_dim": 128
+    },
+    "training": {
+      "epochs": 3,
+      "batch_size": 128,
+      "optimizer": "Adam",
+      "loss": "MeanSquaredError"
+    }
+  },
+  {
+    "name": "cvae",
+    "image": {
+      "dim": 64,
+      "channels": 14,
+      "preview": {
+        "r": 10,
+        "g": 2,
+        "b": 4
+      }
+    },
+    "dataset": {
+      "split_threshold": 0.8,
+      "augmentation_threshold": 0.5
+    },
+    "architecture": {
+      "name": "cvae",
+      "filters": [32, 64, 128],
+      "latent_dim": 128
+    },
+    "training": {
+      "epochs": 3,
+      "batch_size": 128,
+      "optimizer": "Adam",
+      "loss": "BinaryCrossentropy"
+    }
+  },
+  {
+    "name": "simclr",
+    "image": {
+      "dim": 64,
+      "channels": 14,
+      "preview": {
+        "r": 10,
+        "g": 2,
+        "b": 4
+      }
+    },
+    "dataset": {
+      "split_threshold": 0.8,
+      "augmentation_threshold": 0.0
+    },
+    "architecture": {
+      "name": "simclr",
+      "filters": [64, 64, 64],
+      "latent_dim": 128
+    },
+    "training": {
+      "epochs": 3,
+      "batch_size": 128,
+      "optimizer": "Adam",
+      "loss": null
+    }
+  }
+]
