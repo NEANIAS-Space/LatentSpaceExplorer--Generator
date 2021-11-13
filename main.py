@@ -65,7 +65,8 @@ if __name__ == "__main__":
             LATENT_DIM = CONFIG[exp_id]['architecture']['latent_dim']
             EPOCHS = CONFIG[exp_id]['training']['epochs']
             BATCH_SIZE = CONFIG[exp_id]['training']['batch_size']
-            OPTIMIZER = CONFIG[exp_id]['training']['optimizer']
+            OPTIMIZER = CONFIG[exp_id]['training']['optimizer']['name']
+            LEARNING_RATE = CONFIG[exp_id]['training']['optimizer']['learning_rate']
             LOSS = CONFIG[exp_id]['training']['loss']
 
             experiment_dir = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -141,6 +142,7 @@ if __name__ == "__main__":
                     latent_dim=LATENT_DIM,
                     filters=FILTERS,
                     optimizer=OPTIMIZER,
+                    learning_rate=LEARNING_RATE,
                     loss=LOSS
                 )
 
@@ -151,6 +153,7 @@ if __name__ == "__main__":
                     latent_dim=LATENT_DIM,
                     filters=FILTERS,
                     optimizer=OPTIMIZER,
+                    learning_rate=LEARNING_RATE,
                     loss=LOSS
                 )
 
@@ -160,7 +163,8 @@ if __name__ == "__main__":
                     channels_num=CHANNELS_NUM,
                     latent_dim=LATENT_DIM,
                     filters=FILTERS,
-                    optimizer=OPTIMIZER
+                    optimizer=OPTIMIZER,
+                    learning_rate=LEARNING_RATE,
                 )
 
             log_dir = os.path.join(LOGS_DIR, experiment_dir)

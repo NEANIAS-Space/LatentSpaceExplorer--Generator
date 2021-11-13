@@ -99,7 +99,7 @@ class ProjectionHead(Model):
 
 class SimCLR(Model):
 
-    def __init__(self, image_dim, channels_num, latent_dim, filters, optimizer):
+    def __init__(self, image_dim, channels_num, latent_dim, filters, optimizer, learning_rate):
         super(SimCLR, self).__init__()
         self._name = 'simclr'
 
@@ -127,7 +127,12 @@ class SimCLR(Model):
         self.call(layers.Input(shape=encoder_input_shape[1:]))
         self.summary()
 
-        self.optimizer = tf.keras.optimizers.get(optimizer)
+        self.optimizer = tf.keras.optimizers.get({
+            "class_name": optimizer,
+            "config": {
+                "learning_rate": learning_rate
+            }
+        })
         self.contrastive_loss = tfa.losses.ContrastiveLoss()
 
         self.training_tracker_contrastive_loss = tf.keras.metrics.Mean()
