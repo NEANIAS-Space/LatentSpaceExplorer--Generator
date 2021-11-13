@@ -12,7 +12,8 @@ import argparse
 from tqdm import tqdm
 import tensorflow as tf
 
-from utils.images import tf_numpy_load, tf_preprocessing, tf_augmentation
+from utils.preprocessing import tf_numpy_load, tf_preprocessing
+from utils.augmentation import tf_augmentation
 from architectures.cae import ConvolutionalAutoencoder
 from architectures.cvae import ConvolutionalVariationalAutoencoder
 from architectures.simclr import SimCLR
