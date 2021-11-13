@@ -51,7 +51,14 @@ if __name__ == "__main__":
             IMAGE_DIM = CONFIG[exp_id]['image']['dim']
             CHANNELS_NUM = CONFIG[exp_id]['image']['channels']
             SPLIT_THRESHOLD = CONFIG[exp_id]['dataset']['split_threshold']
-            AUGMENTATION_THRESHOLD = CONFIG[exp_id]['dataset']['augmentation_threshold']
+            NORMALIZATION_TYPE = CONFIG[exp_id]['preprocessing']['normalization_type']
+            AUGMENTATION_THRESHOLD = CONFIG[exp_id]['augmentation']['threshold']
+            AUGMENTATION_FLIP_X = CONFIG[exp_id]['augmentation']['flip_x']
+            AUGMENTATION_FLIP_Y = CONFIG[exp_id]['augmentation']['flip_y']
+            AUGMENTATION_ROTATE = CONFIG[exp_id]['augmentation']['rotate']['enabled']
+            AUGMENTATION_ROTATE_DEGREES = CONFIG[exp_id]['augmentation']['rotate']['degrees']
+            AUGMENTATION_SHIFT = CONFIG[exp_id]['augmentation']['shift']['enabled']
+            AUGMENTATION_SHIFT_PERCENTAGE = CONFIG[exp_id]['augmentation']['shift']['percentage']
             ARCHITECTURE = CONFIG[exp_id]['architecture']['name']
             FILTERS = CONFIG[exp_id]['architecture']['filters']
             LATENT_DIM = CONFIG[exp_id]['architecture']['latent_dim']
@@ -74,11 +81,15 @@ if __name__ == "__main__":
 
             # Preprocessing
             dataset = dataset.map(
-                lambda image: tf_preprocessing(image, tf.constant(IMAGE_DIM)),
+                lambda image: tf_preprocessing(
+                    image,
+                    tf.constant(IMAGE_DIM, tf.int8),
+                    tf.constant(NORMALIZATION_TYPE, tf.string)
+                ),
                 num_parallel_calls=tf.data.AUTOTUNE
             )
 
-            length = tf.data.experimental.cardinality(dataset).numpy()
+            length = tf.data.experimental.cardinality(dataset).numpy() + 1
             print(f'Dataset: {length}')
 
             # Split
@@ -102,7 +113,18 @@ if __name__ == "__main__":
                 lambda images:
                     tf.cond(
                         tf.random.uniform([], 0, 1) < AUGMENTATION_THRESHOLD,
-                        lambda: tf_augmentation(images), lambda: images
+                        lambda: tf_augmentation(
+                            images,
+                            tf.constant(AUGMENTATION_FLIP_X, tf.bool),
+                            tf.constant(AUGMENTATION_FLIP_Y, tf.bool),
+                            tf.constant(AUGMENTATION_ROTATE, tf.bool),
+                            tf.constant(
+                                AUGMENTATION_ROTATE_DEGREES, tf.float32),
+                            tf.constant(AUGMENTATION_SHIFT, tf.bool),
+                            tf.constant(
+                                AUGMENTATION_SHIFT_PERCENTAGE, tf.float32)
+                        ),
+                        lambda: images
                     ),
                 num_parallel_calls=tf.data.AUTOTUNE
             )
@@ -184,16 +206,24 @@ if __name__ == "__main__":
         experiment = args.experiment
         experiment_dir = os.path.join(INFERENCE_DIR, experiment)
         images_dir = os.path.join(experiment_dir, 'images')
+        reductions_dir = os.path.join(experiment_dir, 'reductions')
+        clusters_dir = os.path.join(experiment_dir, 'clusters')
         embeddings_path = os.path.join(experiment_dir, 'embeddings.json')
+        labels_path = os.path.join(experiment_dir, 'labels.json')
+        metadata_path = os.path.join(experiment_dir, 'metadata.json')
+
         os.makedirs(experiment_dir)
         os.makedirs(images_dir)
+        os.makedirs(reductions_dir)
+        os.makedirs(clusters_dir)
 
         experiment_config_file = os.path.join(
             MODELS_DIR, experiment, 'config.json')
         with open(experiment_config_file) as f:
             experiment_config = json.load(f)
 
-        image_dim = experiment_config['image']['dim']
+        IMAGE_DIM = experiment_config['image']['dim']
+        NORMALIZATION_TYPE = experiment_config['preprocessing']['normalization_type']
 
         pattern = os.path.join(DATA_NUMPY_DIR, '*.npy')
         dataset = tf.data.Dataset.list_files(pattern, shuffle=False)
@@ -204,8 +234,14 @@ if __name__ == "__main__":
         )
 
         dataset = dataset.map(
-            lambda file, image:
-                (file, tf_preprocessing(image, tf.constant(image_dim))),
+            lambda file, image: (
+                file,
+                tf_preprocessing(
+                    image,
+                    tf.constant(IMAGE_DIM, tf.int8),
+                    tf.constant(NORMALIZATION_TYPE, tf.string)
+                )
+            ),
             num_parallel_calls=tf.data.AUTOTUNE
         )
 
@@ -216,6 +252,7 @@ if __name__ == "__main__":
         model = tf.keras.models.load_model(model_path)
 
         embeddings = []
+        labels = []
 
         for file, image in tqdm(dataset):
             image_name = os.path.basename(tf.compat.as_str_any(file.numpy()))
@@ -241,5 +278,13 @@ if __name__ == "__main__":
             embedding = model.predict(image)[0]
             embeddings.append(embedding.tolist())
 
+            labels.append(image_name)
+
         with open(embeddings_path, 'w+') as f:
             json.dump(embeddings, f)
+
+        with open(labels_path, 'w+') as f:
+            json.dump(labels, f)
+
+        with open(metadata_path, 'w+') as f:
+            json.dump(experiment_config, f)
