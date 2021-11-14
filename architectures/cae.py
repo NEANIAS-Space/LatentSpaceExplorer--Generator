@@ -68,7 +68,6 @@ class Encoder(Model):
             x = ds(x)
 
         x = self.flat(x)
-
         encoded = self.dense(x)
 
         return encoded
