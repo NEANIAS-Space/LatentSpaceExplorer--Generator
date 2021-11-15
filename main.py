@@ -17,6 +17,7 @@ from utils.augmentation import tf_augmentation
 from architectures.cae import ConvolutionalAutoencoder
 from architectures.cvae import ConvolutionalVariationalAutoencoder
 from architectures.simclr import SimCLR
+from architectures.dcgan import DeepConvolutionalGenerativeAdversarialNetwork
 
 
 # Structure
@@ -95,8 +96,9 @@ if __name__ == "__main__":
             print(f'Dataset: {length}')
 
             # Split
-            train_set = dataset.take(round(length * SPLIT_THRESHOLD))
-            test_set = dataset.skip(round(length * SPLIT_THRESHOLD))
+            index = round(length * SPLIT_THRESHOLD)
+            train_set = dataset.take(index)
+            test_set = dataset.skip(index + 1)
 
             print('Training set: {}'.format(
                 tf.data.experimental.cardinality(train_set).numpy()))
@@ -165,6 +167,16 @@ if __name__ == "__main__":
                     filters=FILTERS,
                     optimizer=OPTIMIZER,
                     learning_rate=LEARNING_RATE,
+                )
+
+            elif ARCHITECTURE == "dcgan":
+                model = DeepConvolutionalGenerativeAdversarialNetwork(
+                    image_dim=IMAGE_DIM,
+                    channels_num=CHANNELS_NUM,
+                    latent_dim=LATENT_DIM,
+                    filters=FILTERS,
+                    optimizer=OPTIMIZER,
+                    learning_rate=LEARNING_RATE
                 )
 
             log_dir = os.path.join(LOGS_DIR, experiment_dir)
