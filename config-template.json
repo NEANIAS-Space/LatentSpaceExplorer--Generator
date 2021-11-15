@@ -2,6 +2,7 @@
     {
         "name": "exp5",
         "image": {
+            "format": "image",
             "dim": 32,
             "channels": {
                 "map": {
