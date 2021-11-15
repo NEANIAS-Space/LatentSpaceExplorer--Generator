@@ -35,6 +35,14 @@ def preparation(data_dir, image_format, channels_map):
                     'Detected the same preparation config. Skipping preparation step...')
                 return
 
+    # Remove old files from the numpy folder
+    for file in numpy_files:
+        os.remove(os.path.join(data_numpy_dir, file))
+
+    # Remove old preparation metadata file
+    if os.path.isfile(metadata_path):
+        os.remove(metadata_path)
+
     # Process fits files
     if image_format == "fits":
         print('Converting fits files into numpy files...')
