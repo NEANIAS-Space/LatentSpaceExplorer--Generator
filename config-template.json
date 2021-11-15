@@ -1,47 +1,53 @@
 [
-  {
-      "name": "exp5",
-      "image": {
-          "dim": 32,
-          "channels": 3,
-          "preview": {
-              "r": 0,
-              "g": 1,
-              "b": 2
-          }
-      },
-      "dataset": {
-          "split_threshold": 0.8
-      },
-      "preprocessing": {
-          "normalization_type": "default"
-      },
-      "augmentation": {
-          "threshold": 0.2,
-          "flip_x": true,
-          "flip_y": false,
-          "rotate": {
-              "enabled": false,
-              "degrees": 5
-          },
-          "shift": {
-              "enabled": false,
-              "percentage": 5
-          }
-      },
-      "architecture": {
-          "name": "dcgan",
-          "filters": [64, 128],
-          "latent_dim": 128
-      },
-      "training": {
-          "epochs": 500,
-          "batch_size": 64,
-          "optimizer": {
-              "name": "Adam",
-              "learning_rate": 0.0003
-          },
-          "loss": "MeanSquaredError"
-      }
-  }
+    {
+        "name": "exp5",
+        "image": {
+            "dim": 32,
+            "channels": {
+                "map": {
+                    "r": 0,
+                    "g": 1,
+                    "b": 2
+                },
+                "preview": {
+                    "r": 0,
+                    "g": 1,
+                    "b": 2
+                }
+            }
+        },
+        "dataset": {
+            "split_threshold": 0.8
+        },
+        "preprocessing": {
+            "normalization_type": "default"
+        },
+        "augmentation": {
+            "threshold": 0.2,
+            "flip_x": true,
+            "flip_y": false,
+            "rotate": {
+                "enabled": false,
+                "degrees": 5
+            },
+            "shift": {
+                "enabled": false,
+                "percentage": 5
+            }
+        },
+        "architecture": {
+            "name": "dcgan",
+            "filters": [64, 128],
+            "latent_dim": 128
+        },
+        "training": {
+            "epochs": 500,
+            "batch_size": 64,
+            "optimizer": {
+                "name": "Adam",
+                "learning_rate": 0.0003
+            },
+            "loss": "MeanSquaredError"
+        }
+    }
 ]
