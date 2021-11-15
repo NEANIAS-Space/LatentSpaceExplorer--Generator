@@ -3,6 +3,7 @@
 **/__pycache__
 
 data/*
+!data/.gitkeep
 !data/fits/.gitkeep
 !data/images/.gitkeep
 !data/numpy/.gitkeep
