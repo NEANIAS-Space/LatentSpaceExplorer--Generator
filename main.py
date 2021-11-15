@@ -12,8 +12,11 @@ import argparse
 from tqdm import tqdm
 import tensorflow as tf
 
+
+from utils.preparation import preparation
 from utils.preprocessing import tf_numpy_load, tf_preprocessing
 from utils.augmentation import tf_augmentation
+
 from architectures.cae import ConvolutionalAutoencoder
 from architectures.cvae import ConvolutionalVariationalAutoencoder
 from architectures.simclr import SimCLR
@@ -29,8 +32,12 @@ INFERENCE_DIR = os.path.join(os.getcwd(), 'inference')
 
 # Config file
 CONFIG_FILE = os.path.join(os.getcwd(), 'config.json')
-with open(CONFIG_FILE) as f:
-    CONFIG = json.load(f)
+if os.path.isfile(CONFIG_FILE):
+    with open(CONFIG_FILE) as f:
+        CONFIG = json.load(f)
+else:
+    print('You have to put the configuration file in the folder {}'.format(CONFIG_FILE))
+    exit()
 
 
 parser = argparse.ArgumentParser()
@@ -50,8 +57,10 @@ if __name__ == "__main__":
 
             # Experiment config
             EXPERIMENT_NAME = CONFIG[exp_id]['name']
+            IMAGE_FORMAT = CONFIG[exp_id]['image']['format']
             IMAGE_DIM = CONFIG[exp_id]['image']['dim']
-            CHANNELS_NUM = CONFIG[exp_id]['image']['channels']
+            CHANNELS_MAP = CONFIG[exp_id]['image']['channels']['map']
+            CHANNELS_NUM = len(set(CHANNELS_MAP.values()))
             SPLIT_THRESHOLD = CONFIG[exp_id]['dataset']['split_threshold']
             NORMALIZATION_TYPE = CONFIG[exp_id]['preprocessing']['normalization_type']
             AUGMENTATION_THRESHOLD = CONFIG[exp_id]['augmentation']['threshold']
@@ -72,6 +81,10 @@ if __name__ == "__main__":
 
             experiment_dir = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
             experiment_dir = "{}-{}".format(experiment_dir, EXPERIMENT_NAME)
+
+            # Data preparation
+            print('Data preparation...')
+            preparation(DATA_DIR, IMAGE_FORMAT, CHANNELS_MAP)
 
             # Dataset
             pattern = os.path.join(DATA_NUMPY_DIR, '*.npy')
@@ -278,9 +291,15 @@ if __name__ == "__main__":
 
             channels = tf.unstack(image, axis=2)
 
-            r = channels[experiment_config['image']['preview']['r']]
-            g = channels[experiment_config['image']['preview']['g']]
-            b = channels[experiment_config['image']['preview']['b']]
+            r = channels[
+                experiment_config['image']['channels']['preview']['r']
+            ]
+            g = channels[
+                experiment_config['image']['channels']['preview']['g']
+            ]
+            b = channels[
+                experiment_config['image']['channels']['preview']['b']
+            ]
 
             channels = tf.stack([r, g, b], axis=2)
 
