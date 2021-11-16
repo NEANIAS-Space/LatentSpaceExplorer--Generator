@@ -242,7 +242,8 @@ if __name__ == "__main__":
         reductions_dir = os.path.join(experiment_dir, 'reductions')
         clusters_dir = os.path.join(experiment_dir, 'clusters')
         embeddings_path = os.path.join(experiment_dir, 'embeddings.json')
-        labels_path = os.path.join(experiment_dir, 'labels.json')
+        raw_labels_path = os.path.join(DATA_DIR, 'labels.json')
+        formatted_labels_path = os.path.join(experiment_dir, 'labels.json')
         metadata_path = os.path.join(experiment_dir, 'metadata.json')
 
         os.makedirs(experiment_dir)
@@ -254,6 +255,9 @@ if __name__ == "__main__":
             MODELS_DIR, experiment, 'config.json')
         with open(experiment_config_file) as f:
             experiment_config = json.load(f)
+
+        with open(raw_labels_path) as f:
+            raw_labels = json.load(f)
 
         IMAGE_DIM = experiment_config['image']['dim']
         NORMALIZATION_TYPE = experiment_config['preprocessing']['normalization_type']
@@ -289,7 +293,8 @@ if __name__ == "__main__":
 
         for file, image in tqdm(dataset):
             image_name = os.path.basename(tf.compat.as_str_any(file.numpy()))
-            image_name = '{}.png'.format(os.path.splitext(image_name)[0])
+            source_name = os.path.splitext(image_name)[0]
+            image_name = '{}.png'.format(source_name)
             image_path = os.path.join(images_dir, image_name)
 
             channels = tf.unstack(image, axis=2)
@@ -317,12 +322,15 @@ if __name__ == "__main__":
             embedding = model.predict(image)[0]
             embeddings.append(embedding.tolist())
 
-            labels.append(image_name)
+            record = raw_labels[source_name]
+            record["file_name"] = image_name
+
+            labels.append(record)
 
         with open(embeddings_path, 'w+') as f:
             json.dump(embeddings, f)
 
-        with open(labels_path, 'w+') as f:
+        with open(formatted_labels_path, 'w+') as f:
             json.dump(labels, f)
 
         with open(metadata_path, 'w+') as f:
