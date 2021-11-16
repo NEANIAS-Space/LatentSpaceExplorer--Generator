@@ -26,7 +26,7 @@ class FitsDataGenerator:
         return len(self.fits_paths)
 
     def __next__(self):
-        if self.fits_id >= len(self.fits_paths) - 1:
+        if self.fits_id >= len(self.fits_paths):
             raise StopIteration
 
         fits_path = self.fits_paths[self.fits_id]

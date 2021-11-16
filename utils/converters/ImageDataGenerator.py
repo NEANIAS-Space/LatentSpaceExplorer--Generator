@@ -28,12 +28,12 @@ class ImageDataGenerator:
         return len(self.images_paths)
 
     def __next__(self):
-        if self.image_id >= len(self.images_paths) - 1:
+        if self.image_id >= len(self.images_paths):
             raise StopIteration
 
         image_path = self.images_paths[self.image_id]
 
-        image = Image.open(image_path)
+        image = Image.open(image_path).convert('RGB')
         image = np.array(image, dtype=np.float32)
 
         image_name = '{}.npy'.format(
