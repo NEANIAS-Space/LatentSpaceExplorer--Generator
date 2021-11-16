@@ -20,7 +20,7 @@ from utils.augmentation import tf_augmentation
 from architectures.cae import ConvolutionalAutoencoder
 from architectures.cvae import ConvolutionalVariationalAutoencoder
 from architectures.simclr import SimCLR
-from architectures.dcgan import DeepConvolutionalGenerativeAdversarialNetwork
+from architectures.dcgan import DCGAN
 
 
 # Structure
@@ -111,7 +111,7 @@ if __name__ == "__main__":
             # Split
             index = round(length * SPLIT_THRESHOLD)
             train_set = dataset.take(index)
-            test_set = dataset.skip(index + 1)
+            test_set = dataset.skip(index - 1)
 
             print('Training set: {}'.format(
                 tf.data.experimental.cardinality(train_set).numpy()))
@@ -183,14 +183,14 @@ if __name__ == "__main__":
                 )
 
             elif ARCHITECTURE == "dcgan":
-                model = DeepConvolutionalGenerativeAdversarialNetwork(
+                model = DCGAN(
                     image_dim=IMAGE_DIM,
                     channels_num=CHANNELS_NUM,
                     latent_dim=LATENT_DIM,
                     filters=FILTERS,
-                    optimizer=OPTIMIZER,
-                    learning_rate=LEARNING_RATE
                 )
+
+                model.compile(optimizer=OPTIMIZER, learning_rate=LEARNING_RATE)
 
             log_dir = os.path.join(LOGS_DIR, experiment_dir)
             summary_writer = tf.summary.create_file_writer(log_dir)
@@ -205,8 +205,11 @@ if __name__ == "__main__":
                 for batch, test_batch in enumerate(test_set):
                     model.test_step(test_batch)
 
+                # Log
                 with summary_writer.as_default():
                     model.log(
+                        # TODO: Look how to pass epoch with tensorflow
+                        # This line generete the warning during the training
                         tf.constant(epoch, dtype=tf.int64),
                         train_batch, test_batch
                     )
@@ -223,7 +226,7 @@ if __name__ == "__main__":
             print('Model saved')
 
             with open(experiment_config, 'w+') as f:
-                json.dump(CONFIG[exp_id], f, indent=2)
+                json.dump(CONFIG[exp_id], f, indent=4)
             print('Experiment config saved')
 
     elif args.step == 'inference':

@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Model, layers, activations
 
@@ -9,13 +10,11 @@ class DownSampling(layers.Layer):
         self._name = name
 
         self.conv = layers.Conv2D(filter, (3, 3), strides=2, padding='same')
-        self.bn = layers.BatchNormalization()
         self.act = layers.LeakyReLU()
 
     def call(self, inputs):
 
         x = self.conv(inputs)
-        x = self.bn(x)
         x = self.act(x)
 
         return x
@@ -23,22 +22,18 @@ class DownSampling(layers.Layer):
 
 class UpSampling(layers.Layer):
 
-    def __init__(self, name, filter, strides):
+    def __init__(self, name, filter):
         super(UpSampling, self).__init__()
         self._name = name
 
         self.conv = layers.Conv2DTranspose(
-            filter, (3, 3), strides=strides, padding='same')
-        self.bn = layers.BatchNormalization()
+            filter, (4, 4), strides=2, padding='same')
         self.act = layers.LeakyReLU()
-        self.drop = layers.Dropout(0.3)
 
     def call(self, inputs):
 
         x = self.conv(inputs)
-        x = self.bn(x)
         x = self.act(x)
-        x = self.drop(x)
 
         return x
 
@@ -55,9 +50,8 @@ class Discriminator(Model):
                 DownSampling(f'down_sampling_{id}', filter)
             )
 
-        self.flat = layers.Flatten()
+        self.maxpool = layers.GlobalMaxPooling2D()
         self.dense = layers.Dense(1)
-        self.act = layers.Activation(activations.sigmoid)
 
     def call(self, inputs):
 
@@ -66,54 +60,50 @@ class Discriminator(Model):
         for ds in self.downsamplings[1:]:
             x = ds(x)
 
-        x = self.flat(x)
-        x = self.dense(x)
-        output = self.act(x)
+        x = self.maxpool(x)
+        output = self.dense(x)
 
         return output
 
 
 class Generator(Model):
 
-    def __init__(self, flat_dim, pre_flat_shape, channels_num, filters):
+    def __init__(self, pool_dim, pre_pool_shape, channels_num, filters):
         super(Generator, self).__init__()
         self._name = 'generator'
 
-        self.dense = layers.Dense(units=flat_dim)
-        self.reshape = layers.Reshape(pre_flat_shape)
+        self.dense = layers.Dense(units=pool_dim)
+        self.act1 = layers.LeakyReLU()
+        self.reshape = layers.Reshape(pre_pool_shape)
 
         self.upsamplings = []
-        self.upsamplings.append(
-            UpSampling(f'up_sampling_0', filters[0], strides=1)
-        )
-
-        for id, filter in enumerate(filters[1:], 1):
+        for id, filter in enumerate(filters):
             self.upsamplings.append(
-                UpSampling(f'up_sampling_{id}', filter, strides=2)
+                UpSampling(f'up_sampling_{id}', filter)
             )
 
-        self.transpose = layers.Conv2DTranspose(
-            channels_num, (3, 3), strides=2, padding='same')
-        self.act = layers.Activation(activations.tanh)
+        self.conv = layers.Conv2D(channels_num, (3, 3), padding='same')
+        self.act2 = layers.Activation(activations.sigmoid)
 
     def call(self, inputs):
 
         x = self.dense(inputs)
+        x = self.act1(x)
         x = self.reshape(x)
 
         for us in self.upsamplings:
             x = us(x)
 
-        x = self.transpose(x)
-        output = self.act(x)
+        x = self.conv(x)
+        output = self.act2(x)
 
         return output
 
 
-class DeepConvolutionalGenerativeAdversarialNetwork(Model):
+class DCGAN(Model):
 
-    def __init__(self, image_dim, channels_num, latent_dim, filters, optimizer, learning_rate):
-        super(DeepConvolutionalGenerativeAdversarialNetwork, self).__init__()
+    def __init__(self, image_dim, channels_num, latent_dim, filters):
+        super(DCGAN, self).__init__()
         self._name = 'dcgan'
         self.channels_num = channels_num
         self.latent_dim = latent_dim
@@ -127,11 +117,11 @@ class DeepConvolutionalGenerativeAdversarialNetwork(Model):
             shape=discriminator_input_shape[1:]))
         self.discriminator.summary()
 
-        flat_dim = self.discriminator.flat.output_shape[1]
-        pre_flat_shape = self.discriminator.flat.input_shape[1:]
+        pre_pool_shape = self.discriminator.maxpool.input_shape[1:]
+        pool_dim = np.prod(np.array(list(pre_pool_shape)))
 
         self.generator = Generator(
-            flat_dim, pre_flat_shape, channels_num, filters[::-1])
+            pool_dim, pre_pool_shape, channels_num, filters[::-1])
         self.generator.build(input_shape=generator_input_shape)
         self.generator.call(layers.Input(shape=generator_input_shape[1:]))
         self.generator.summary()
@@ -139,6 +129,9 @@ class DeepConvolutionalGenerativeAdversarialNetwork(Model):
         self.build(input_shape=generator_input_shape)
         self.call(layers.Input(shape=generator_input_shape[1:]))
         self.summary()
+
+    def compile(self, optimizer, learning_rate):
+        super(DCGAN, self).compile()
 
         self.discriminator_optimizer = tf.keras.optimizers.get({
             "class_name": optimizer,
@@ -170,9 +163,15 @@ class DeepConvolutionalGenerativeAdversarialNetwork(Model):
             self.test_tracker_generator_loss
         ]
 
-    def call(self, inputs):
+    def call(self, inputs, training=True):
         fake = self.generator(inputs)
-        return fake
+
+        if not training:
+            return fake
+
+        judgment = self.discriminator(fake)
+
+        return judgment
 
     @tf.function
     def train_step(self, train_batch):
@@ -180,43 +179,44 @@ class DeepConvolutionalGenerativeAdversarialNetwork(Model):
         label_real = tf.zeros([train_batch.shape[0]])
         label_fake = tf.ones([train_batch.shape[0]])
 
-        noise = tf.random.normal(
-            [train_batch.shape[0], self.latent_dim], 0.5, )
+        label_real += 0.05 * tf.random.uniform(tf.shape(label_real))
+        label_fake += 0.05 * tf.random.uniform(tf.shape(label_fake))
+
+        noise = tf.random.normal([train_batch.shape[0], self.latent_dim])
         real = train_batch
+        fake = self.generator(noise)
 
         # Discriminator
-        with tf.GradientTape() as discriminator_tape:
-            fake = self.generator(noise, training=True)
-
-            output_real = self.discriminator(real, training=True)
-            output_fake = self.discriminator(fake, training=True)
+        with tf.GradientTape() as tape:
+            output_real = self.discriminator(real)
+            output_fake = self.discriminator(fake)
 
             loss_real = self.loss(label_real, output_real)
             loss_fake = self.loss(label_fake, output_fake)
             loss_discriminator = loss_real + loss_fake
 
-        # Generator
-        with tf.GradientTape() as generator_tape:
-            fake = self.generator(noise, training=True)
-
-            output_fake = self.discriminator(fake, training=True)
-
-            loss_generator = self.loss(label_fake, output_fake)
-
-        grads_discriminator = discriminator_tape.gradient(
+        grads = tape.gradient(
             loss_discriminator, self.discriminator.trainable_weights)
-        grads_generator = generator_tape.gradient(
-            loss_generator, self.trainable_weights)
 
         self.discriminator_optimizer.apply_gradients(
-            zip(grads_discriminator, self.discriminator.trainable_weights))
-        self.generator_optimizer.apply_gradients(
-            zip(grads_generator, self.trainable_weights))
+            zip(grads, self.discriminator.trainable_weights))
 
         self.training_tracker_discriminator_loss.update_state(
             loss_discriminator)
-        self.training_tracker_generator_loss.update_state(
-            loss_generator)
+
+        # Generator
+        with tf.GradientTape() as tape:
+            output_fake = self.discriminator(self.generator(noise))
+
+            loss_generator = self.loss(label_real, output_fake)
+
+        grads_generator = tape.gradient(
+            loss_generator, self.generator.trainable_weights)
+
+        self.generator_optimizer.apply_gradients(
+            zip(grads_generator, self.generator.trainable_weights))
+
+        self.training_tracker_generator_loss.update_state(loss_generator)
 
         return {
             "discriminator_loss": self.training_tracker_discriminator_loss.result(),
@@ -229,19 +229,21 @@ class DeepConvolutionalGenerativeAdversarialNetwork(Model):
         label_real = tf.ones([test_batch.shape[0]])
         label_fake = tf.zeros([test_batch.shape[0]])
 
+        label_real += 0.05 * tf.random.uniform(tf.shape(label_real))
+        label_fake += 0.05 * tf.random.uniform(tf.shape(label_fake))
+
         noise = tf.random.normal([test_batch.shape[0], self.latent_dim])
         real = test_batch
+        fake = self.generator(noise)
 
-        fake = self.generator(noise, training=True)
-
-        output_real = self.discriminator(real, training=True)
-        output_fake = self.discriminator(fake, training=True)
+        output_real = self.discriminator(real)
+        output_fake = self.discriminator(fake)
 
         loss_real = self.loss(label_real, output_real)
         loss_fake = self.loss(label_fake, output_fake)
         loss_discriminator = loss_real + loss_fake
 
-        loss_generator = self.loss(label_fake, output_fake)
+        loss_generator = self.loss(label_real, output_fake)
 
         self.test_tracker_discriminator_loss.update_state(loss_discriminator)
         self.test_tracker_generator_loss.update_state(loss_generator)
@@ -301,9 +303,9 @@ class DeepConvolutionalGenerativeAdversarialNetwork(Model):
             max_outputs=self.channels_num
         )
 
-        noise = tf.random.uniform(shape=(1, self.latent_dim), dtype=tf.float32)
+        noise = tf.random.normal([test_batch.shape[0], self.latent_dim])
 
-        fake_batch = self.generator(noise, training=False)
+        fake_batch = self.generator(noise)
         fake_image = fake_batch[0, :, :, :]
 
         channels = tf.transpose(fake_image, perm=[2, 0, 1])
