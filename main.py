@@ -335,3 +335,11 @@ if __name__ == "__main__":
 
         with open(metadata_path, 'w+') as f:
             json.dump(experiment_config, f)
+
+        clusters_gitkeep_path = os.path.join(clusters_dir, ".gitkeep")
+        with open(clusters_gitkeep_path, 'w+') as f:
+            pass
+        
+        reductions_gitkeep_path = os.path.join(reductions_dir, ".gitkeep")
+        with open(reductions_gitkeep_path, 'w+') as f:
+            pass
