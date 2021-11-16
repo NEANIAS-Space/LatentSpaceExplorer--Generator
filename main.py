@@ -242,9 +242,8 @@ if __name__ == "__main__":
         reductions_dir = os.path.join(experiment_dir, 'reductions')
         clusters_dir = os.path.join(experiment_dir, 'clusters')
         embeddings_path = os.path.join(experiment_dir, 'embeddings.json')
-        raw_labels_path = os.path.join(DATA_DIR, 'labels.json')
-        formatted_labels_path = os.path.join(experiment_dir, 'labels.json')
         metadata_path = os.path.join(experiment_dir, 'metadata.json')
+        labels_path = os.path.join(experiment_dir, 'labels.json')
 
         os.makedirs(experiment_dir)
         os.makedirs(images_dir)
@@ -256,8 +255,9 @@ if __name__ == "__main__":
         with open(experiment_config_file) as f:
             experiment_config = json.load(f)
 
-        with open(raw_labels_path) as f:
-            raw_labels = json.load(f)
+        input_labels_path = os.path.join(DATA_DIR, 'labels.json')
+        with open(input_labels_path) as f:
+            input_labels = json.load(f)
 
         IMAGE_DIM = experiment_config['image']['dim']
         NORMALIZATION_TYPE = experiment_config['preprocessing']['normalization_type']
@@ -291,10 +291,11 @@ if __name__ == "__main__":
         embeddings = []
         labels = []
 
-        for file, image in tqdm(dataset):
+        for i, data in enumerate(tqdm(dataset)):
+            file, image = data
+
             image_name = os.path.basename(tf.compat.as_str_any(file.numpy()))
-            source_name = os.path.splitext(image_name)[0]
-            image_name = '{}.png'.format(source_name)
+            image_name = '{}.png'.format(os.path.splitext(image_name)[0])
             image_path = os.path.join(images_dir, image_name)
 
             channels = tf.unstack(image, axis=2)
@@ -322,24 +323,24 @@ if __name__ == "__main__":
             embedding = model.predict(image)[0]
             embeddings.append(embedding.tolist())
 
-            record = raw_labels[source_name]
-            record["file_name"] = image_name
+            label = input_labels[i]
+            label['file_name'] = image_name
 
-            labels.append(record)
+            labels.append(label)
 
         with open(embeddings_path, 'w+') as f:
             json.dump(embeddings, f)
 
-        with open(formatted_labels_path, 'w+') as f:
-            json.dump(labels, f)
-
         with open(metadata_path, 'w+') as f:
             json.dump(experiment_config, f)
+
+        with open(labels_path, 'w+') as f:
+            json.dump(labels, f)
 
         clusters_gitkeep_path = os.path.join(clusters_dir, ".gitkeep")
         with open(clusters_gitkeep_path, 'w+') as f:
             pass
-        
+
         reductions_gitkeep_path = os.path.join(reductions_dir, ".gitkeep")
         with open(reductions_gitkeep_path, 'w+') as f:
             pass
