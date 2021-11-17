@@ -323,9 +323,9 @@ if __name__ == "__main__":
             embedding = model.predict(image)[0]
             embeddings.append(embedding.tolist())
 
+            label = {}
+            label['file_name'] = image_name
             if input_labels:
-                label = {}
-                label['file_name'] = image_name
                 label.update(input_labels[i])
 
             labels.append(label)
