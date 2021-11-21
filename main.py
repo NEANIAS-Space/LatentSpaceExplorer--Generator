@@ -172,25 +172,11 @@ if __name__ == "__main__":
                     loss=LOSS
                 )
 
-            elif ARCHITECTURE == "simclr":
-                model = SimCLR(
-                    image_dim=IMAGE_DIM,
-                    channels_num=CHANNELS_NUM,
-                    latent_dim=LATENT_DIM,
-                    filters=FILTERS,
+                model.compile(
                     optimizer=OPTIMIZER,
                     learning_rate=LEARNING_RATE,
+                    loss=LOSS
                 )
-
-            elif ARCHITECTURE == "dcgan":
-                model = DCGAN(
-                    image_dim=IMAGE_DIM,
-                    channels_num=CHANNELS_NUM,
-                    latent_dim=LATENT_DIM,
-                    filters=FILTERS,
-                )
-
-                model.compile(optimizer=OPTIMIZER, learning_rate=LEARNING_RATE)
 
             log_dir = os.path.join(LOGS_DIR, experiment_dir)
             summary_writer = tf.summary.create_file_writer(log_dir)
