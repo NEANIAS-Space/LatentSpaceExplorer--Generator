@@ -105,13 +105,13 @@ if __name__ == "__main__":
                 num_parallel_calls=tf.data.AUTOTUNE
             )
 
-            length = tf.data.experimental.cardinality(dataset).numpy() + 1
+            length = tf.data.experimental.cardinality(dataset).numpy()
             print(f'Dataset: {length}')
 
             # Split
             index = round(length * SPLIT_THRESHOLD)
             train_set = dataset.take(index)
-            test_set = dataset.skip(index - 1)
+            test_set = dataset.skip(index)
 
             print('Training set: {}'.format(
                 tf.data.experimental.cardinality(train_set).numpy()))

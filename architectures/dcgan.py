@@ -11,11 +11,13 @@ class DownSampling(layers.Layer):
 
         self.conv = layers.Conv2D(filter, (3, 3), strides=2, padding='same')
         self.act = layers.LeakyReLU()
+        self.drop = layers.Dropout(0.3)
 
     def call(self, inputs):
 
         x = self.conv(inputs)
         x = self.act(x)
+        x = self.drop(x)
 
         return x
 
@@ -27,12 +29,14 @@ class UpSampling(layers.Layer):
         self._name = name
 
         self.conv = layers.Conv2DTranspose(
-            filter, (4, 4), strides=2, padding='same')
+            filter, (3, 3), strides=2, padding='same')
+        self.bn = layers.BatchNormalization()
         self.act = layers.LeakyReLU()
 
     def call(self, inputs):
 
         x = self.conv(inputs)
+        x = self.bn(x)
         x = self.act(x)
 
         return x
@@ -50,8 +54,8 @@ class Discriminator(Model):
                 DownSampling(f'down_sampling_{id}', filter)
             )
 
-        self.maxpool = layers.GlobalMaxPooling2D()
-        self.dense = layers.Dense(1)
+        self.flat = layers.Flatten()
+        self.dense = layers.Dense(units=1)
 
     def call(self, inputs):
 
@@ -60,7 +64,7 @@ class Discriminator(Model):
         for ds in self.downsamplings[1:]:
             x = ds(x)
 
-        x = self.maxpool(x)
+        x = self.flat(x)
         output = self.dense(x)
 
         return output
@@ -68,13 +72,15 @@ class Discriminator(Model):
 
 class Generator(Model):
 
-    def __init__(self, pool_dim, pre_pool_shape, channels_num, filters):
+    def __init__(self, flat_dim, pre_flat_shape, filters, channels_num):
         super(Generator, self).__init__()
         self._name = 'generator'
 
-        self.dense = layers.Dense(units=pool_dim)
+        self.dense = layers.Dense(units=flat_dim)
+        self.bn = layers.BatchNormalization()
         self.act1 = layers.LeakyReLU()
-        self.reshape = layers.Reshape(pre_pool_shape)
+
+        self.reshape = layers.Reshape(pre_flat_shape)
 
         self.upsamplings = []
         for id, filter in enumerate(filters):
@@ -82,13 +88,16 @@ class Generator(Model):
                 UpSampling(f'up_sampling_{id}', filter)
             )
 
-        self.conv = layers.Conv2D(channels_num, (3, 3), padding='same')
-        self.act2 = layers.Activation(activations.sigmoid)
+        self.conv = layers.Conv2DTranspose(
+            channels_num, (3, 3), strides=1, padding='same')
+        self.act2 = layers.Activation(activations.tanh)
 
     def call(self, inputs):
 
         x = self.dense(inputs)
+        x = self.bn(x)
         x = self.act1(x)
+
         x = self.reshape(x)
 
         for us in self.upsamplings:
@@ -117,11 +126,11 @@ class DCGAN(Model):
             shape=discriminator_input_shape[1:]))
         self.discriminator.summary()
 
-        pre_pool_shape = self.discriminator.maxpool.input_shape[1:]
-        pool_dim = np.prod(np.array(list(pre_pool_shape)))
+        flat_dim = self.discriminator.flat.output_shape[1]
+        pre_flat_shape = self.discriminator.flat.input_shape[1:]
 
         self.generator = Generator(
-            pool_dim, pre_pool_shape, channels_num, filters[::-1])
+            flat_dim, pre_flat_shape, filters[::-1], channels_num)
         self.generator.build(input_shape=generator_input_shape)
         self.generator.call(layers.Input(shape=generator_input_shape[1:]))
         self.generator.summary()
@@ -174,17 +183,21 @@ class DCGAN(Model):
         return judgment
 
     @tf.function
-    def train_step(self, train_batch):
-
+    def train_step(self, epoch, train_batch):
         label_real = tf.zeros([train_batch.shape[0]])
-        label_fake = tf.ones([train_batch.shape[0]])
-
         label_real += 0.05 * tf.random.uniform(tf.shape(label_real))
+
+        label_fake = tf.ones([train_batch.shape[0]])
         label_fake += 0.05 * tf.random.uniform(tf.shape(label_fake))
 
         noise = tf.random.normal([train_batch.shape[0], self.latent_dim])
+        decay_noise = self.decay_function(epoch)
+
         real = train_batch
+        real = self.add_gaussian_noise(real, std=decay_noise)
+
         fake = self.generator(noise)
+        fake = self.add_gaussian_noise(fake, std=decay_noise)
 
         # Discriminator
         with tf.GradientTape() as tape:
@@ -206,7 +219,10 @@ class DCGAN(Model):
 
         # Generator
         with tf.GradientTape() as tape:
-            output_fake = self.discriminator(self.generator(noise))
+            output_fake = self.discriminator(
+                self.add_gaussian_noise(
+                    self.generator(noise), std=decay_noise)
+            )
 
             loss_generator = self.loss(label_real, output_fake)
 
@@ -224,17 +240,21 @@ class DCGAN(Model):
         }
 
     @tf.function
-    def test_step(self, test_batch):
-
+    def test_step(self, epoch, test_batch):
         label_real = tf.ones([test_batch.shape[0]])
-        label_fake = tf.zeros([test_batch.shape[0]])
-
         label_real += 0.05 * tf.random.uniform(tf.shape(label_real))
+
+        label_fake = tf.zeros([test_batch.shape[0]])
         label_fake += 0.05 * tf.random.uniform(tf.shape(label_fake))
 
         noise = tf.random.normal([test_batch.shape[0], self.latent_dim])
+        decay_noise = self.decay_function(epoch)
+
         real = test_batch
+        real = self.add_gaussian_noise(real, std=decay_noise)
+
         fake = self.generator(noise)
+        fake = self.add_gaussian_noise(fake, std=decay_noise)
 
         output_real = self.discriminator(real)
         output_fake = self.discriminator(fake)
@@ -282,8 +302,13 @@ class DCGAN(Model):
         self.test_tracker_discriminator_loss.reset_state()
         self.test_tracker_generator_loss.reset_state()
 
-        train_image = train_batch[0, :, :, :]
-        test_image = test_batch[0, :, :, :]
+        noise = tf.random.normal([test_batch.shape[0], self.latent_dim])
+        decay_noise = self.decay_function(epoch)
+
+        train_image = self.add_gaussian_noise(
+            train_batch[0, :, :, :], std=decay_noise)
+        test_image = self.add_gaussian_noise(
+            test_batch[0, :, :, :], std=decay_noise)
 
         channels = tf.transpose(train_image, perm=[2, 0, 1])
         channels = tf.expand_dims(channels, -1)
@@ -303,8 +328,6 @@ class DCGAN(Model):
             max_outputs=self.channels_num
         )
 
-        noise = tf.random.normal([test_batch.shape[0], self.latent_dim])
-
         fake_batch = self.generator(noise)
         fake_image = fake_batch[0, :, :, :]
 
@@ -316,3 +339,13 @@ class DCGAN(Model):
             step=epoch,
             max_outputs=self.channels_num
         )
+
+    @ tf.function
+    def add_gaussian_noise(self, input, std):
+        noise = tf.random.normal(
+            tf.shape(input), mean=0.0, stddev=std, dtype=tf.float32)
+        return input + noise
+
+    @ tf.function
+    def decay_function(self, x):
+        return 2.71 ** (tf.cast(-x, dtype=tf.float32) * 0.05)
