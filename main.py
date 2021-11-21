@@ -17,10 +17,8 @@ from utils.preparation import preparation
 from utils.preprocessing import tf_numpy_load, tf_preprocessing
 from utils.augmentation import tf_augmentation
 
-from architectures.cae import ConvolutionalAutoencoder
-from architectures.cvae import ConvolutionalVariationalAutoencoder
-from architectures.simclr import SimCLR
-from architectures.dcgan import DCGAN
+from architectures.cae import CAE
+from architectures.cvae import CVAE
 
 
 # Structure
@@ -151,25 +149,25 @@ if __name__ == "__main__":
 
             # Model
             if ARCHITECTURE == "cae":
-                model = ConvolutionalAutoencoder(
+                model = CAE(
                     image_dim=IMAGE_DIM,
                     channels_num=CHANNELS_NUM,
                     latent_dim=LATENT_DIM,
-                    filters=FILTERS,
+                    filters=FILTERS
+                )
+
+                model.compile(
                     optimizer=OPTIMIZER,
                     learning_rate=LEARNING_RATE,
                     loss=LOSS
                 )
 
             elif ARCHITECTURE == "cvae":
-                model = ConvolutionalVariationalAutoencoder(
+                model = CVAE(
                     image_dim=IMAGE_DIM,
                     channels_num=CHANNELS_NUM,
                     latent_dim=LATENT_DIM,
-                    filters=FILTERS,
-                    optimizer=OPTIMIZER,
-                    learning_rate=LEARNING_RATE,
-                    loss=LOSS
+                    filters=FILTERS
                 )
 
                 model.compile(

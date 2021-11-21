@@ -106,10 +106,10 @@ class Decoder(Model):
         return decoded
 
 
-class ConvolutionalAutoencoder(Model):
+class CAE(Model):
 
-    def __init__(self, image_dim, channels_num, latent_dim, filters, optimizer, learning_rate, loss):
-        super(ConvolutionalAutoencoder, self).__init__()
+    def __init__(self, image_dim, channels_num, latent_dim, filters):
+        super(CAE, self).__init__()
         self._name = 'cae'
         self.channels_num = channels_num
 
@@ -135,6 +135,9 @@ class ConvolutionalAutoencoder(Model):
         self.call(layers.Input(shape=encoder_input_shape[1:]))
         self.summary()
 
+    def compile(self, optimizer, learning_rate, loss):
+        super(CAE, self).compile()
+
         self.optimizer = tf.keras.optimizers.get({
             "class_name": optimizer,
             "config": {
@@ -150,8 +153,6 @@ class ConvolutionalAutoencoder(Model):
 
         self.training_tracker_decoded_loss = tf.keras.metrics.Mean()
         self.test_tracker_decoded_loss = tf.keras.metrics.Mean()
-
-        self.compile(optimizer=optimizer)
 
     @property
     def metrics(self):
@@ -224,7 +225,6 @@ class ConvolutionalAutoencoder(Model):
         train_image = tf.expand_dims(train_image, 0)
         predicted_image = self(train_image, training=True)
         predicted_channels = tf.transpose(predicted_image, perm=[3, 1, 2, 0])
-
         tf.summary.image(
             "Images/Train/Predicted",
             predicted_channels,
