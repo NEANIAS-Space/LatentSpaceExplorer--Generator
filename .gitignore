@@ -7,6 +7,7 @@ data/*
 !data/fits/.gitkeep
 !data/images/.gitkeep
 !data/numpy/.gitkeep
+!data/labels-template.json
 
 models/*
 !models/.gitkeep
