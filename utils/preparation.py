@@ -71,6 +71,21 @@ def preparation(data_dir, image_format, channels_map):
             image_path = os.path.join(data_output_dir, image_name)
             np.save(image_path, image)
 
+    # Process numpy files
+    elif image_format == "numpy":
+        print('Copying numpy files...')
+
+        data = [
+            (numpy_file, np.load(os.path.join(data_input_dir, numpy_file)))
+            for numpy_file in os.listdir(data_input_dir)
+            if numpy_file.endswith('.npy')
+        ]
+
+        for item in tqdm(data):
+            image_name, image = item
+            image_path = os.path.join(data_output_dir, image_name)
+            np.save(image_path, image)
+
     # Save preparation metadata
     metadata = {
         "format": image_format,
