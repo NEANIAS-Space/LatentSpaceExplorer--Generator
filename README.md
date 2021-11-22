@@ -1,84 +1,130 @@
 # Latent space generator
 
-Use that repo to produce latent space to be explored in the projector lse.neanias.eu
-
 ## General introduction
-The list of experiments to be runned need to be listed in config.json file. (detailed later)
 
-When the config file is fullfilled run:
+## Setup
+1. Download or clone the code:
 
-`python main.py training`
+    `git clone git@gitlab.neanias.eu:s3-service/latent-space-explorer/generator.git`
 
-Training produce models and logs saved in the same name folders. Logs could be user in tensorboard to monitor the trainining by opening the browser at the link shown by:
+2. Environment setup
+    - pip env
 
-`tensorboard --logdir logs`
+        ```
+        python -m venv .venv
+        source /.venv/bin/activate
+        pip install -r requirements.txt
+        ```
+    - docker image
 
-To extract embeddings run:
+        `docker run -it -p 6006:6006 --gpus=all -v $PWD:/workdir dr4thmos/lsg-gpu:0.1`
 
-`python main.py inference --experiment <model-name>`
+## Import data
+1. Copy your sources into /data/input
+    - For images, you could use extensions in [jpeg, jpg, png]
+    - For fits, your sources need to be folders with inside a fits file per band (e.g. )
+        ```    
+        - /Source001
+            - <survey_band1-name>.fits
+            - <survey_band2-name>.fits
+            - ...
+        - /Source002
+            - <survey_band1-name>.fits
+            - <survey_band2-name>.fits
+            - ...
+        ```
+    - For numpy, copy as they are
+2. Describe your input in the config.json file image section
 
-The above commands refer to data stored in data/numpy. It's possible to work on preprocessing and augmentation of the data, detail follow in the data section
-
-## How to run
-To run the code install requirements listed in requirements.txt file with:
-
-`pip install -r requirements.txt`
-
-If you want to run it in an isolated environment follow 1 of below steps
-
-### pipenv
-```
-python -m venv .venv
-source /.venv/bin/activate
-pip install -r requirements.txt
-```
-
-### docker container
-`docker run -it -p 6006:6006 --gpus=all -v $PWD:/workdir gitlab.neanias.eu:5050/s3-service/latent-space-explorer/generator/lsg-gpu:0.1`
-
-## Data
-Data are intended to be produced by the repo "data-converter" as a folder containing a numpy file per source, in a structure like that:
-- /data
-    - channels.json -> probably it will be removed in a future release, because is used only to infer number of channels
-    - /numpy
-        - source0001.npy
-        - source0002.npy
-        - ...
-
-Every source numpy file has a number of channels choosen in the previous step (fits -> numpy) referring to specific bands.
-
-<b>Preprocessing</b> phase it's done in the pipeline, and the functions to be performed could be found in utils/images.py. Here it could be possible to add normalization, deal with NaN and so on.
-
-In the same file it could be tuned the <b>augmentation</b> phase. (and in future could be added to the config.json)
-
-## Experiment configuration
-The config.json file have that structure:
-```
-[
-  {
-    "name": "default",
+    ```
     "image": {
-      "dim": 64
-    },
+        "format": "fits",
+        "dim": 32,
+        "channels": {
+        "map": {
+            {
+                "survey_band1-name": 2,
+                "survey_band2-name": 0,
+                "survey_band3-name": 1,
+                "survey_band4-name": 3,
+                "survey_band5-name": 4,
+                "survey_band6-name": 4
+            }
+        },
+            "preview": {
+                "r": 4,
+                "g": 0,
+                "b": 2
+            }
+        }
+    }
+    ```
+    - Detailed info in dedicated section
+
+## Training
+1. Fill the config file in the following parts: (more detail in specific section)
+    ```
     "dataset": {
-      "split_threshold": 0.8,
-      "augmentation_threshold": 0.5
+        "split_threshold": 0.95
+    },
+    "preprocessing": {
+        "normalization_type": "snr"
+    },
+    "augmentation": {
+        "threshold": 0.6,
+        "flip_x": true,
+        "flip_y": true,
+        "rotate": {
+            "enabled": true,
+            "degrees": 45
+        },
+        "shift": {
+            "enabled": true,
+            "percentage": 10
+        }
     },
     "architecture": {
-      "filters": [16, 32, 64],
-      "latent_dim": 128
+        "name": "cae",
+        "filters": [
+            32,
+            64,
+            128,
+            256
+        ],
+        "latent_dim": 64
     },
     "training": {
-      "epochs": 3,
-      "batch_size": 32,
-      "optimizer": "Adam",
-      "loss": "MeanSquaredError"
+        "epochs": 10000,
+        "batch_size": 32,
+        "optimizer": {
+            "name": "Adam",
+            "learning_rate": 0.0003
+        },
+        "loss": "MeanSquaredError"
     }
-  }
-]
-```
+    ```
+2. Start the training:
 
+    `python main.py training`
 
-## Architectures
-In architectures folder there are the python files with proper classes for each model.
+3. Start tensorboard to monitor the training:
+    
+    `tensorboard --logdir logs`
 
+## Export
+1. Fill the config file:
+    
+    ```
+    "inference": {
+        "save_generated_images": false
+    }
+    ```
+2. Start the inference:
+    `python main.py inference --experiment <experiment-folder>`
+
+## Config templates
+To make your life easier, we prepared some config files for each architecture available. More details in dedicated readme.
+
+- Convolutional AutoEncoder
+- Variational Convolutional AutoEncoder
+- Simclr
