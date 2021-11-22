@@ -2,9 +2,10 @@
 .vscode
 **/__pycache__
 
-data/*
-!data/.gitkeep
+data/input/*
 !data/input/.gitkeep
+
+data/output/*
 !data/output/.gitkeep
 
 models/*
