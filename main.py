@@ -237,6 +237,7 @@ if __name__ == "__main__":
         experiment = args.experiment
         experiment_dir = os.path.join(INFERENCE_DIR, experiment)
         images_dir = os.path.join(experiment_dir, 'images')
+        generated_dir = os.path.join(experiment_dir, 'generated')
         reductions_dir = os.path.join(experiment_dir, 'reductions')
         clusters_dir = os.path.join(experiment_dir, 'clusters')
         embeddings_path = os.path.join(experiment_dir, 'embeddings.json')
@@ -245,6 +246,7 @@ if __name__ == "__main__":
 
         os.makedirs(experiment_dir)
         os.makedirs(images_dir)
+        os.makedirs(generated_dir)
         os.makedirs(reductions_dir)
         os.makedirs(clusters_dir)
 
@@ -259,6 +261,7 @@ if __name__ == "__main__":
 
         IMAGE_DIM = experiment_config['image']['dim']
         NORMALIZATION_TYPE = experiment_config['preprocessing']['normalization_type']
+        SAVE_GENERATED_IMAGES = experiment_config['inference']['save_generated_images']
 
         pattern = os.path.join(DATA_OUTPUT_DIR, '*.npy')
         dataset = tf.data.Dataset.list_files(pattern, shuffle=False)
@@ -295,6 +298,7 @@ if __name__ == "__main__":
             image_name = os.path.basename(tf.compat.as_str_any(file.numpy()))
             image_name = '{}.png'.format(os.path.splitext(image_name)[0])
             image_path = os.path.join(images_dir, image_name)
+            generated_path = os.path.join(generated_dir, image_name)
 
             channels = tf.unstack(image, axis=2)
 
@@ -327,6 +331,15 @@ if __name__ == "__main__":
                 label.update(input_labels[i])
 
             labels.append(label)
+
+            if SAVE_GENERATED_IMAGES:
+                generated = model(image, training=True)[0]
+
+                tf.keras.utils.save_img(
+                    path=generated_path,
+                    x=generated.numpy(),
+                    data_format="channels_last"
+                )
 
         with open(embeddings_path, 'w+') as f:
             json.dump(embeddings, f)
