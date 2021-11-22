@@ -24,7 +24,7 @@ from architectures.simclr import SimCLR
 
 # Structure
 DATA_DIR = os.path.join(os.getcwd(), 'data')
-DATA_NUMPY_DIR = os.path.join(DATA_DIR, 'numpy')
+DATA_OUTPUT_DIR = os.path.join(DATA_DIR, 'output')
 MODELS_DIR = os.path.join(os.getcwd(), 'models')
 LOGS_DIR = os.path.join(os.getcwd(), 'logs')
 INFERENCE_DIR = os.path.join(os.getcwd(), 'inference')
@@ -86,7 +86,7 @@ if __name__ == "__main__":
             preparation(DATA_DIR, IMAGE_FORMAT, CHANNELS_MAP)
 
             # Dataset
-            pattern = os.path.join(DATA_NUMPY_DIR, '*.npy')
+            pattern = os.path.join(DATA_OUTPUT_DIR, '*.npy')
             dataset = tf.data.Dataset.list_files(pattern)
 
             dataset = dataset.map(
@@ -98,7 +98,7 @@ if __name__ == "__main__":
             dataset = dataset.map(
                 lambda image: tf_preprocessing(
                     image,
-                    tf.constant(IMAGE_DIM, tf.int8),
+                    tf.constant(IMAGE_DIM, tf.uint16),
                     tf.constant(NORMALIZATION_TYPE, tf.string)
                 ),
                 num_parallel_calls=tf.data.AUTOTUNE
@@ -260,7 +260,7 @@ if __name__ == "__main__":
         IMAGE_DIM = experiment_config['image']['dim']
         NORMALIZATION_TYPE = experiment_config['preprocessing']['normalization_type']
 
-        pattern = os.path.join(DATA_NUMPY_DIR, '*.npy')
+        pattern = os.path.join(DATA_OUTPUT_DIR, '*.npy')
         dataset = tf.data.Dataset.list_files(pattern, shuffle=False)
 
         dataset = dataset.map(
@@ -273,7 +273,7 @@ if __name__ == "__main__":
                 file,
                 tf_preprocessing(
                     image,
-                    tf.constant(IMAGE_DIM, tf.int8),
+                    tf.constant(IMAGE_DIM, tf.uint16),
                     tf.constant(NORMALIZATION_TYPE, tf.string)
                 )
             ),

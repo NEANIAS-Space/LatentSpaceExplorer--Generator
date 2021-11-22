@@ -4,10 +4,8 @@
 
 data/*
 !data/.gitkeep
-!data/fits/.gitkeep
-!data/images/.gitkeep
-!data/numpy/.gitkeep
-!data/labels-template.json
+!data/input/.gitkeep
+!data/output/.gitkeep
 
 models/*
 !models/.gitkeep
