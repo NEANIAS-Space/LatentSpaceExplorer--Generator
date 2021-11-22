@@ -19,6 +19,7 @@ from utils.augmentation import tf_augmentation
 
 from architectures.cae import CAE
 from architectures.cvae import CVAE
+from architectures.simclr import SimCLR
 
 
 # Structure
@@ -174,6 +175,19 @@ if __name__ == "__main__":
                     optimizer=OPTIMIZER,
                     learning_rate=LEARNING_RATE,
                     loss=LOSS
+                )
+
+            elif ARCHITECTURE == "simclr":
+                model = SimCLR(
+                    image_dim=IMAGE_DIM,
+                    channels_num=CHANNELS_NUM,
+                    latent_dim=LATENT_DIM,
+                    filters=FILTERS
+                )
+
+                model.compile(
+                    optimizer=OPTIMIZER,
+                    learning_rate=LEARNING_RATE
                 )
 
             log_dir = os.path.join(LOGS_DIR, experiment_dir)

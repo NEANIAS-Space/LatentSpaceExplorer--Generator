@@ -3,6 +3,66 @@ import tensorflow_addons as tfa
 from tensorflow.keras import Model, layers
 
 
+class RandomColorAffine(layers.Layer):
+    def __init__(self, brightness=0, jitter=0, **kwargs):
+        super().__init__(**kwargs)
+
+        self.brightness = brightness
+        self.jitter = jitter
+
+    def call(self, images, training=True):
+        if training:
+            batch_size = tf.shape(images)[0]
+
+            # Same for all colors
+            brightness_scales = 1 + tf.random.uniform(
+                (batch_size, 1, 1, 1), minval=-self.brightness, maxval=self.brightness
+            )
+            # Different for all colors
+            jitter_matrices = tf.random.uniform(
+                (batch_size, 1, 3, 3), minval=-self.jitter, maxval=self.jitter
+            )
+
+            color_transforms = (
+                tf.eye(3, batch_shape=[batch_size, 1]) * brightness_scales
+                + jitter_matrices
+            )
+            images = tf.clip_by_value(
+                tf.matmul(images, color_transforms), 0, 1)
+        return images
+
+
+class Augmenter(Model):
+
+    def __init__(self, min_area=0.25):
+        super(Augmenter, self).__init__()
+        self._name = 'augmenter'
+
+        # TODO: tf.Variable().numpy() make the variable serializable.
+        # Look to better solution
+
+        zoom_factor = tf.Variable(
+            1.0 - tf.sqrt(min_area), trainable=False).numpy()
+        brightness = tf.Variable(0.6, trainable=False).numpy()
+        jitter = tf.Variable(0.2, trainable=False).numpy()
+
+        self.flip = layers.RandomFlip("horizontal")
+        self.translation = layers.RandomTranslation(
+            zoom_factor / 2, zoom_factor / 2)
+        self.zoom = layers.RandomZoom(
+            (-zoom_factor, 0.0), (-zoom_factor, 0.0))
+        self.color = RandomColorAffine(brightness, jitter)
+
+    def call(self, inputs):
+
+        x = self.flip(inputs)
+        x = self.translation(x)
+        x = self.zoom(x)
+        x = self.color(x)
+
+        return x
+
+
 class DownSampling(layers.Layer):
 
     def __init__(self, name, filter):
@@ -16,32 +76,6 @@ class DownSampling(layers.Layer):
 
         x = self.conv(inputs)
         x = self.act(x)
-
-        return x
-
-
-class Augmenter(Model):
-
-    def __init__(self, min_area=0.25):
-        super(Augmenter, self).__init__()
-        self._name = 'augmenter'
-
-        # TODO: tf.Variable().numpy() make the variable serializable.
-        # Look to better solution
-        zoom_factor = tf.Variable(
-            1.0 - tf.sqrt(min_area), trainable=False).numpy()
-
-        self.flip = layers.RandomFlip("horizontal")
-        self.translation = layers.RandomTranslation(
-            zoom_factor / 2, zoom_factor / 2)
-        self.zoom = layers.RandomZoom(
-            (-zoom_factor, 0.0), (-zoom_factor, 0.0))
-
-    def call(self, inputs):
-
-        x = self.flip(inputs)
-        x = self.translation(x)
-        x = self.zoom(x)
 
         return x
 
@@ -99,9 +133,10 @@ class ProjectionHead(Model):
 
 class SimCLR(Model):
 
-    def __init__(self, image_dim, channels_num, latent_dim, filters, optimizer, learning_rate):
+    def __init__(self, image_dim, channels_num, latent_dim, filters):
         super(SimCLR, self).__init__()
         self._name = 'simclr'
+        self.channels_num = channels_num
 
         encoder_input_shape = (None, image_dim, image_dim, channels_num)
         projection_head_input_shape = (None, latent_dim)
@@ -127,6 +162,9 @@ class SimCLR(Model):
         self.call(layers.Input(shape=encoder_input_shape[1:]))
         self.summary()
 
+    def compile(self, optimizer, learning_rate):
+        super(SimCLR, self).compile()
+
         self.optimizer = tf.keras.optimizers.get({
             "class_name": optimizer,
             "config": {
@@ -138,8 +176,6 @@ class SimCLR(Model):
         self.training_tracker_contrastive_loss = tf.keras.metrics.Mean()
         self.test_tracker_contrastive_loss = tf.keras.metrics.Mean()
 
-        self.compile(optimizer=optimizer)
-
     @property
     def metrics(self):
         return [
@@ -147,11 +183,10 @@ class SimCLR(Model):
             self.test_tracker_contrastive_loss
         ]
 
-    def call(self, inputs, training=True):
-        if training:
-            inputs = self.contrastive_augmenter(inputs)
+    def call(self, inputs):
+        augmented = self.contrastive_augmenter(inputs)
 
-        encoded = self.encoder(inputs)
+        encoded = self.encoder(augmented)
         projection = self.projection_head(encoded)
 
         return projection
@@ -159,24 +194,58 @@ class SimCLR(Model):
     @tf.function
     def train_step(self, train_batch):
 
+        projections_1 = self(tf.random.shuffle(train_batch))
+
         with tf.GradientTape() as tape:
-            projections_1 = self(train_batch, training=True)
-            projections_2 = self(train_batch, training=True)
+            projections_2 = self(train_batch)
+            projections_3 = self(train_batch)
 
-            contrastive_loss = self.contrastive_loss(
-                projections_1, projections_2)
+            label_positive = tf.zeros([train_batch.shape[0]])
+            prediction_positive = tf.norm(
+                projections_2 - projections_3, axis=1)
 
-        grads = tape.gradient(contrastive_loss, self.trainable_weights)
-        self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
+            label_negative = tf.ones([train_batch.shape[0]])
+            prediction_negative = tf.norm(
+                projections_1 - projections_2, axis=1)
+
+            labels = tf.concat([label_positive, label_negative], axis=0)
+            predictions = tf.concat(
+                [prediction_positive, prediction_negative], axis=0)
+
+            contrastive_loss = self.contrastive_loss(labels, predictions)
+
+        grads = tape.gradient(
+            contrastive_loss,
+            self.encoder.trainable_weights + self.projection_head.trainable_weights
+        )
+        self.optimizer.apply_gradients(
+            zip(
+                grads,
+                self.encoder.trainable_weights + self.projection_head.trainable_weights
+            )
+        )
 
         self.training_tracker_contrastive_loss.update_state(contrastive_loss)
 
     @tf.function
     def test_step(self, test_batch):
-        projections_1 = self(test_batch, training=False)
-        projections_2 = self(test_batch, training=False)
+        projections_1 = self(tf.random.shuffle(test_batch))
+        projections_2 = self(test_batch)
+        projections_3 = self(test_batch)
 
-        contrastive_loss = self.contrastive_loss(projections_1, projections_2)
+        label_positive = tf.zeros([test_batch.shape[0]])
+        prediction_positive = tf.norm(
+            projections_2 - projections_3, axis=1)
+
+        label_negative = tf.ones([test_batch.shape[0]])
+        prediction_negative = tf.norm(
+            projections_1 - projections_2, axis=1)
+
+        labels = tf.concat([label_positive, label_negative], axis=0)
+        predictions = tf.concat(
+            [prediction_positive, prediction_negative], axis=0)
+
+        contrastive_loss = self.contrastive_loss(labels, predictions)
 
         self.test_tracker_contrastive_loss.update_state(contrastive_loss)
 
@@ -196,3 +265,62 @@ class SimCLR(Model):
 
         self.training_tracker_contrastive_loss.reset_state()
         self.test_tracker_contrastive_loss.reset_state()
+
+        train_image = train_batch[0, :, :, :]
+        test_image = test_batch[0, :, :, :]
+
+        channels = tf.transpose(train_image, perm=[2, 0, 1])
+        channels = tf.expand_dims(channels, -1)
+        tf.summary.image(
+            "Images/Train",
+            channels,
+            step=epoch,
+            max_outputs=self.channels_num
+        )
+
+        train_image = tf.expand_dims(train_image, 0)
+        augmented_1 = self.contrastive_augmenter(train_image)
+        predicted_channels = tf.transpose(augmented_1, perm=[3, 1, 2, 0])
+        tf.summary.image(
+            "Images/Train/Projection 1",
+            predicted_channels,
+            step=epoch,
+            max_outputs=self.channels_num
+        )
+
+        augmented_2 = self.contrastive_augmenter(train_image)
+        predicted_channels = tf.transpose(augmented_2, perm=[3, 1, 2, 0])
+        tf.summary.image(
+            "Images/Train/Projection 2",
+            predicted_channels,
+            step=epoch,
+            max_outputs=self.channels_num
+        )
+
+        channels = tf.transpose(test_image, perm=[2, 0, 1])
+        channels = tf.expand_dims(channels, -1)
+        tf.summary.image(
+            "Images/Test",
+            channels,
+            step=epoch,
+            max_outputs=self.channels_num
+        )
+
+        test_image = tf.expand_dims(test_image, 0)
+        augmented_1 = self.contrastive_augmenter(test_image)
+        predicted_channels = tf.transpose(augmented_1, perm=[3, 1, 2, 0])
+        tf.summary.image(
+            "Images/Test/Projection 1",
+            predicted_channels,
+            step=epoch,
+            max_outputs=self.channels_num
+        )
+
+        augmented_2 = self.contrastive_augmenter(test_image)
+        predicted_channels = tf.transpose(augmented_2, perm=[3, 1, 2, 0])
+        tf.summary.image(
+            "Images/Test/Projection 2",
+            predicted_channels,
+            step=epoch,
+            max_outputs=self.channels_num
+        )
