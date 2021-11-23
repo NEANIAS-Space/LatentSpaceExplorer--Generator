@@ -1,7 +1,14 @@
 # Latent space generator
-
+This repository produces latent space to be explored in the projector lse.neanias.eu.
 ## General introduction
+This repository implements a Machine Learning pipeline. Full detailed pipeline info will be available in specific readme:
+- [Data preparation](./docs/DATA_AUGMENTATION.md)
+- [Data preprocessing](./docs/DATA_PREPROCESSING.md)
+- [Data Augmentation](./docs/DATA_PREPROCESSING.md)
+- [Training](./docs/TRAINING.md)
+- [Inference](./docs/INFERENCE.md)
 
+Here follows a quick start guide to go quick in a working example
 ## Setup
 1. Download or clone the code:
 
@@ -62,47 +69,11 @@
     - Detailed info in dedicated section
 
 ## Training
-1. Fill the config file in the following parts: (more detail in specific section)
-    ```
-    "dataset": {
-        "split_threshold": 0.95
-    },
-    "preprocessing": {
-        "normalization_type": "snr"
-    },
-    "augmentation": {
-        "threshold": 0.6,
-        "flip_x": true,
-        "flip_y": true,
-        "rotate": {
-            "enabled": true,
-            "degrees": 45
-        },
-        "shift": {
-            "enabled": true,
-            "percentage": 10
-        }
-    },
-    "architecture": {
-        "name": "cae",
-        "filters": [
-            32,
-            64,
-            128,
-            256
-        ],
-        "latent_dim": 64
-    },
-    "training": {
-        "epochs": 10000,
-        "batch_size": 32,
-        "optimizer": {
-            "name": "Adam",
-            "learning_rate": 0.0003
-        },
-        "loss": "MeanSquaredError"
-    }
-    ```
+1. Choose one of the prepared config file in architectures folder in order to start:
+    - [Convolutional Autoencoder](./architectures/config_cae.json)
+    - [Convolutional Variational Autoencoder](./architectures/config_cvae.json)
+    - [SimClr](./architectures/config_simclr.json)
+
 2. Start the training:
 
     `python main.py training`
@@ -119,12 +90,7 @@
         "save_generated_images": false
     }
     ```
-2. Start the inference:
+2. Start the inference on a specific model in the /models folder:
     `python main.py inference --experiment <experiment-folder>`
 
-## Config templates
-To make your life easier, we prepared some config files for each architecture available. More details in dedicated readme.
-
-- Convolutional AutoEncoder
-- Variational Convolutional AutoEncoder
-- Simclr
+3. Upload the folder created into nextcloud lse-<email> shared folder

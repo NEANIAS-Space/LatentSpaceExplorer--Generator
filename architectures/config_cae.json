@@ -1,0 +1,55 @@
+[
+    {
+        "name": "example",
+        "image": {
+            "format": "fits",
+            "dim": 128,
+            "channels": {
+                "map": {
+                    "channel1": 0,
+                    "channel2": 1,
+                    "channel3": 2,
+                    "channel4": 2
+                },
+                "preview": {
+                    "r": 2,
+                    "g": 0,
+                    "b": 1
+                }
+            }
+        },
+        "dataset": {
+            "split_threshold": 0.8
+        },
+        "preprocessing": {
+            "normalization_type": "multichannel"
+        },
+        "augmentation": {
+            "threshold": 0.7,
+            "flip_x": true,
+            "flip_y": true,
+            "rotate": {
+                "enabled": true,
+                "degrees": 45
+            },
+            "shift": {
+                "enabled": true,
+                "percentage": 10
+            }
+        },
+        "architecture": {
+            "name": "cae",
+            "filters": [64, 64, 128, 128],
+            "latent_dim": 64
+        },
+        "training": {
+            "epochs": 100,
+            "batch_size": 64,
+            "optimizer": {
+                "name": "Adam",
+                "learning_rate": 0.003
+            },
+            "loss": "MeanSquaredError"
+        }
+    }
+]
