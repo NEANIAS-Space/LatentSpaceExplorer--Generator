@@ -90,7 +90,7 @@ Here follows a quick start guide to go quick in a working example.
 
 ## Training
 
-1. Choose one of the prepared config files in order to start
+1. Choose one of the prepared config files in order to start and copy it to the project root (near the `main.py` file)
 
     - [Convolutional Autoencoder](./docs/templates/cae.json)
     - [Convolutional Variational Autoencoder](./docs/templates/cvae.json)
@@ -107,6 +107,8 @@ Here follows a quick start guide to go quick in a working example.
     ```
     tensorboard --logdir logs
     ```
+
+---
 
 ## Export
 
