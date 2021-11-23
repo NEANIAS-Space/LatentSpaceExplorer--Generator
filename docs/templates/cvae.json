@@ -21,7 +21,7 @@
             "split_threshold": 0.8
         },
         "preprocessing": {
-            "normalization_type": "custom_snr"
+            "normalization_type": "custom"
         },
         "augmentation": {
             "threshold": 0.7,
@@ -37,7 +37,7 @@
             }
         },
         "architecture": {
-            "name": "simclr",
+            "name": "cvae",
             "filters": [64, 64, 128, 128],
             "latent_dim": 64
         },
@@ -48,7 +48,7 @@
                 "name": "Adam",
                 "learning_rate": 0.003
             },
-            "loss": ""
+            "loss": "MeanSquaredError"
         }
     }
 ]
