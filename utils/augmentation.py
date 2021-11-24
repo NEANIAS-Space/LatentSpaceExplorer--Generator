@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
 
@@ -14,18 +15,32 @@ def augmentation(images, flip_x, flip_y, rotate, rotate_degrees, shift, shift_pe
 
     def rotate_fn(degrees):
         def rotate(images, degrees=degrees):
-            return tfa.image.rotate(images, degrees * tf.random.uniform([], -1, 1))
+            radians = tf.math.multiply(
+                degrees,
+                tf.math.divide(np.pi, tf.cast(180, dtype=tf.float32))
+            )
+            radians = tf.math.multiply(
+                radians, tf.random.uniform([], -1, 1)
+            )
+            return tfa.image.rotate(images, radians, interpolation="bilinear")
         return rotate
 
     def shift_fn(percentage):
         def shift(images, percentage=percentage):
             magnitude = tf.cast(
-                tf.math.divide(images.shape[1], percentage),
+                tf.math.multiply(
+                    images.shape[1],
+                    tf.math.divide(percentage, 100)
+                ),
                 tf.float32
             )
-            return tfa.image.translate(
-                images, magnitude * tf.random.uniform([2], -1, 1)
+            magnitude = tf.math.floor(
+                tf.math.multiply(
+                    magnitude,
+                    tf.random.uniform([2], -1, 1)
+                )
             )
+            return tfa.image.translate(images, magnitude)
         return shift
 
     augmentations = []
