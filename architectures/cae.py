@@ -199,7 +199,7 @@ class CAE(Model):
     def save_best_model(self, model_dir):
         loss_to_monitor = self.test_tracker_decoded_loss.result()
 
-        if self.best_loss < loss_to_monitor:
+        if self.best_loss > loss_to_monitor:
             self.best_loss = self.test_tracker_decoded_loss.result()
             self.save(model_dir)
 
