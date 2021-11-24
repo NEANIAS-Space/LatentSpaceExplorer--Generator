@@ -253,6 +253,13 @@ class CVAE(Model):
             "total_loss": self.test_tracker_total_loss.result(),
         }
 
+    def save_best_model(self, model_dir):
+        loss_to_monitor = self.test_tracker_total_loss.result()
+
+        if self.best_loss > loss_to_monitor:
+            self.best_loss = loss_to_monitor
+            self.save(model_dir)
+
     @tf.function
     def log(self, epoch, train_batch, test_batch):
         tf.summary.scalar(
