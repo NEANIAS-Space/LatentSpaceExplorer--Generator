@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Model, layers, activations
 
@@ -111,6 +112,7 @@ class CAE(Model):
     def __init__(self, image_dim, channels_num, latent_dim, filters):
         super(CAE, self).__init__()
         self._name = 'cae'
+        self.best_loss = np.inf
         self.channels_num = channels_num
 
         encoder_input_shape = (None, image_dim, image_dim, channels_num)
@@ -183,7 +185,7 @@ class CAE(Model):
 
         self.training_tracker_decoded_loss.update_state(decoded_loss)
 
-        return {"decoded_loss": self.training_tracker_decoded_loss.result()}
+        return self.training_tracker_decoded_loss.result()
 
     @tf.function
     def test_step(self, test_batch):
@@ -192,7 +194,14 @@ class CAE(Model):
 
         self.test_tracker_decoded_loss.update_state(decoded_loss)
 
-        return {"decoded_loss": self.test_tracker_decoded_loss.result()}
+        return self.test_tracker_decoded_loss.result()
+
+    def save_best_model(self, model_dir):
+        loss_to_monitor = self.test_tracker_decoded_loss.result()
+
+        if self.best_loss < loss_to_monitor:
+            self.best_loss = self.test_tracker_decoded_loss.result()
+            self.save(model_dir)
 
     @tf.function
     def log(self, epoch, train_batch, test_batch):

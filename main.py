@@ -190,6 +190,14 @@ if __name__ == "__main__":
                     learning_rate=LEARNING_RATE
                 )
 
+            model_dir = os.path.join(MODELS_DIR, experiment_dir)
+            os.makedirs(model_dir)
+
+            experiment_config = os.path.join(
+                MODELS_DIR, experiment_dir, 'config.json')
+            with open(experiment_config, 'w+') as f:
+                json.dump(CONFIG[exp_id], f, indent=4)
+
             log_dir = os.path.join(LOGS_DIR, experiment_dir)
             summary_writer = tf.summary.create_file_writer(log_dir)
 
@@ -203,6 +211,10 @@ if __name__ == "__main__":
                 for batch, test_batch in enumerate(test_set):
                     model.test_step(test_batch)
 
+                # Save best model
+                if epoch > (EPOCHS / 2):
+                    model.save_best_model(model_dir)
+
                 # Log
                 with summary_writer.as_default():
                     model.log(
@@ -212,20 +224,10 @@ if __name__ == "__main__":
                         train_batch, test_batch
                     )
 
-            model_dir = os.path.join(MODELS_DIR, experiment_dir)
             # model_architecture = os.path.join(
             #     MODELS_DIR, experiment_dir, 'model.png')
-            experiment_config = os.path.join(
-                MODELS_DIR, experiment_dir, 'config.json')
-
-            model.save(model_dir)
             # tf.keras.utils.plot_model(
             #     model, to_file=model_architecture, show_shapes=True, expand_nested=True)
-            print('Model saved')
-
-            with open(experiment_config, 'w+') as f:
-                json.dump(CONFIG[exp_id], f, indent=4)
-            print('Experiment config saved')
 
     elif args.step == 'inference':
         print('Inference...')
