@@ -185,7 +185,9 @@ class CAE(Model):
 
         self.training_tracker_decoded_loss.update_state(decoded_loss)
 
-        return self.training_tracker_decoded_loss.result()
+        return {
+            "decoded_loss": self.training_tracker_decoded_loss.result()
+        }
 
     @tf.function
     def test_step(self, test_batch):
@@ -194,13 +196,15 @@ class CAE(Model):
 
         self.test_tracker_decoded_loss.update_state(decoded_loss)
 
-        return self.test_tracker_decoded_loss.result()
+        return {
+            "decoded_loss": self.test_tracker_decoded_loss.result()
+        }
 
     def save_best_model(self, model_dir):
         loss_to_monitor = self.test_tracker_decoded_loss.result()
 
         if self.best_loss > loss_to_monitor:
-            self.best_loss = self.test_tracker_decoded_loss.result()
+            self.best_loss = loss_to_monitor
             self.save(model_dir)
 
     @tf.function
