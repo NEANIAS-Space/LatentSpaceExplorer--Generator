@@ -192,14 +192,22 @@ if __name__ == "__main__":
                     learning_rate=LEARNING_RATE
                 )
 
+            # Create model dir
             model_dir = os.path.join(MODELS_DIR, experiment_dir)
             os.makedirs(model_dir)
 
+            # encoder_architecture_path = os.path.join(
+            #     MODELS_DIR, experiment_dir, '{}.png'.format(ARCHITECTURE))
+            # tf.keras.utils.plot_model(
+            #     model.encoder, to_file=encoder_architecture_path, show_shapes=True, expand_nested=True)
+
+            # Save experiement config
             experiment_config = os.path.join(
                 MODELS_DIR, experiment_dir, 'config.json')
             with open(experiment_config, 'w+') as f:
                 json.dump(CONFIG[exp_id], f, indent=4)
 
+            # Set logger
             log_dir = os.path.join(LOGS_DIR, experiment_dir)
             summary_writer = tf.summary.create_file_writer(log_dir)
 
@@ -223,11 +231,6 @@ if __name__ == "__main__":
 
                 # Reset losses
                 model.reset_losses_state()
-
-            # model_architecture = os.path.join(
-            #     MODELS_DIR, experiment_dir, 'model.png')
-            # tf.keras.utils.plot_model(
-            #     model, to_file=model_architecture, show_shapes=True, expand_nested=True)
 
     elif args.step == 'inference':
         print('Inference...')

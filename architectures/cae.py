@@ -112,8 +112,8 @@ class CAE(Model):
     def __init__(self, image_dim, channels_num, latent_dim, filters):
         super(CAE, self).__init__()
         self._name = 'cae'
-        self.best_loss = np.inf
         self.channels_num = channels_num
+        self.best_loss = np.inf
 
         encoder_input_shape = (None, image_dim, image_dim, channels_num)
         decoder_input_shape = (None, latent_dim)
