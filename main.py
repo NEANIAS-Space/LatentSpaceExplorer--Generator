@@ -9,8 +9,10 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import json
 import datetime
 import argparse
+import pandas as pd
 from tqdm import tqdm
 import tensorflow as tf
+from pandas_profiling import ProfileReport
 
 
 from utils.preparation import preparation
@@ -217,12 +219,10 @@ if __name__ == "__main__":
 
                 # Log
                 with summary_writer.as_default():
-                    model.log(
-                        # TODO: Look how to pass epoch with tensorflow
-                        # This line generete the warning during the training
-                        tf.constant(epoch, dtype=tf.int64),
-                        train_batch, test_batch
-                    )
+                    model.log(epoch, train_batch, test_batch)
+
+                # Reset losses
+                model.reset_losses_state()
 
             # model_architecture = os.path.join(
             #     MODELS_DIR, experiment_dir, 'model.png')
@@ -264,6 +264,7 @@ if __name__ == "__main__":
         IMAGE_DIM = experiment_config['image']['dim']
         NORMALIZATION_TYPE = experiment_config['preprocessing']['normalization_type']
         SAVE_GENERATED_IMAGES = experiment_config['inference']['save_generated_images']
+        GENERATE_EMBEDDINGS_REPORT = experiment_config['inference']['generate_embeddings_report']
 
         pattern = os.path.join(DATA_OUTPUT_DIR, '*.npy')
         dataset = tf.data.Dataset.list_files(pattern, shuffle=False)
@@ -335,7 +336,7 @@ if __name__ == "__main__":
             labels.append(label)
 
             if SAVE_GENERATED_IMAGES:
-                generated = model(image, training=True)[0]
+                generated = model(image)[0]
 
                 tf.keras.utils.save_img(
                     path=generated_path,
@@ -359,3 +360,17 @@ if __name__ == "__main__":
         reductions_gitkeep_path = os.path.join(reductions_dir, ".gitkeep")
         with open(reductions_gitkeep_path, 'w+') as f:
             pass
+
+        if GENERATE_EMBEDDINGS_REPORT:
+            dataframe = pd.DataFrame(embeddings)
+            # dataframe = (dataframe - dataframe.min()) / \
+            #     (dataframe.max() - dataframe.min())
+
+            pandas_profiler_config_path = os.path.join(
+                os.getcwd(), "pandas_profiler_config.yaml")
+            profile = ProfileReport(
+                dataframe, config_file=pandas_profiler_config_path)
+
+            embeddings_report_path = os.path.join(
+                experiment_dir, "embeddings_report.html")
+            profile.to_file(embeddings_report_path)
