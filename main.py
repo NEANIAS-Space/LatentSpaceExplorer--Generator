@@ -339,7 +339,7 @@ if __name__ == "__main__":
             labels.append(label)
 
             if SAVE_GENERATED_IMAGES:
-                generated = model(image)[0]
+                generated = model(image, training=True)[0]
 
                 tf.keras.utils.save_img(
                     path=generated_path,
