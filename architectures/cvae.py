@@ -189,7 +189,7 @@ class CVAE(Model):
             self.test_tracker_total_loss
         ]
 
-    def call(self, inputs, training=True):
+    def call(self, inputs, training=False):
         z_mean, z_log_var, z = self.encoder(inputs)
 
         if not training:
@@ -260,7 +260,6 @@ class CVAE(Model):
             self.best_loss = loss_to_monitor
             self.save(model_dir)
 
-    @tf.function
     def log(self, epoch, train_batch, test_batch):
         tf.summary.scalar(
             'Decoded Loss/Training',
@@ -294,50 +293,55 @@ class CVAE(Model):
             step=epoch
         )
 
+        # Log images
+        if epoch % 100 == 0:
+            train_image = train_batch[0, :, :, :]
+            test_image = test_batch[0, :, :, :]
+
+            channels = tf.transpose(train_image, perm=[2, 0, 1])
+            channels = tf.expand_dims(channels, -1)
+            tf.summary.image(
+                "Images/Train",
+                channels,
+                step=epoch,
+                max_outputs=self.channels_num
+            )
+
+            channels = tf.transpose(test_image, perm=[2, 0, 1])
+            channels = tf.expand_dims(channels, -1)
+            tf.summary.image(
+                "Images/Test",
+                channels,
+                step=epoch,
+                max_outputs=self.channels_num
+            )
+
+            train_image = tf.expand_dims(train_image, 0)
+            predicted_image = self(train_image, training=True)
+            predicted_channels = tf.transpose(
+                predicted_image, perm=[3, 1, 2, 0])
+            tf.summary.image(
+                "Images/Train/Predicted",
+                predicted_channels,
+                step=epoch,
+                max_outputs=self.channels_num
+            )
+
+            test_image = tf.expand_dims(test_image, 0)
+            predicted_image = self(test_image, training=True)
+            predicted_channels = tf.transpose(
+                predicted_image, perm=[3, 1, 2, 0])
+            tf.summary.image(
+                "Images/Test/Predicted",
+                predicted_channels,
+                step=epoch,
+                max_outputs=self.channels_num
+            )
+
+    def reset_losses_state(self):
         self.training_tracker_decoded_loss.reset_state()
         self.training_tracker_kl_loss.reset_state()
         self.training_tracker_total_loss.reset_state()
         self.test_tracker_decoded_loss.reset_state()
         self.test_tracker_kl_loss.reset_state()
         self.test_tracker_total_loss.reset_state()
-
-        train_image = train_batch[0, :, :, :]
-        test_image = test_batch[0, :, :, :]
-
-        channels = tf.transpose(train_image, perm=[2, 0, 1])
-        channels = tf.expand_dims(channels, -1)
-        tf.summary.image(
-            "Images/Train",
-            channels,
-            step=epoch,
-            max_outputs=self.channels_num
-        )
-
-        train_image = tf.expand_dims(train_image, 0)
-        predicted_image = self(train_image, training=True)
-        predicted_channels = tf.transpose(predicted_image, perm=[3, 1, 2, 0])
-        tf.summary.image(
-            "Images/Train/Predicted",
-            predicted_channels,
-            step=epoch,
-            max_outputs=self.channels_num
-        )
-
-        channels = tf.transpose(test_image, perm=[2, 0, 1])
-        channels = tf.expand_dims(channels, -1)
-        tf.summary.image(
-            "Images/Test",
-            channels,
-            step=epoch,
-            max_outputs=self.channels_num
-        )
-
-        test_image = tf.expand_dims(test_image, 0)
-        predicted_image = self(test_image, training=True)
-        predicted_channels = tf.transpose(predicted_image, perm=[3, 1, 2, 0])
-        tf.summary.image(
-            "Images/Test/Predicted",
-            predicted_channels,
-            step=epoch,
-            max_outputs=self.channels_num
-        )
