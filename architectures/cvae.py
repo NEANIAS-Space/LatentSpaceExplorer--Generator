@@ -1,8 +1,9 @@
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Model, layers, activations
 
 
-class DownSampling(layers.Layer):
+class DownSampling(Model):
 
     def __init__(self, name, filter):
         super(DownSampling, self).__init__()
@@ -23,7 +24,7 @@ class DownSampling(layers.Layer):
         return x
 
 
-class UpSampling(layers.Layer):
+class UpSampling(Model):
 
     def __init__(self, name, filter):
         super(UpSampling, self).__init__()
@@ -45,7 +46,7 @@ class UpSampling(layers.Layer):
         return x
 
 
-class Sampling(layers.Layer):
+class Sampling(Model):
 
     def call(self, inputs):
         z_mean, z_log_var = inputs
@@ -132,6 +133,7 @@ class CVAE(Model):
         super(CVAE, self).__init__()
         self._name = 'cvae'
         self.channels_num = channels_num
+        self.best_loss = np.inf
 
         encoder_input_shape = (None, image_dim, image_dim, channels_num)
         decoder_input_shape = (None, latent_dim)
