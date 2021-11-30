@@ -112,7 +112,7 @@ if __name__ == "__main__":
             # Split
             index = round(length * SPLIT_THRESHOLD)
             train_set = dataset.take(index)
-            test_set = dataset.skip(index)
+            test_set = dataset.skip(index + 1)
 
             print('Training set: {}'.format(
                 tf.data.experimental.cardinality(train_set).numpy()))
@@ -195,11 +195,6 @@ if __name__ == "__main__":
             # Create model dir
             model_dir = os.path.join(MODELS_DIR, experiment_dir)
             os.makedirs(model_dir)
-
-            # encoder_architecture_path = os.path.join(
-            #     MODELS_DIR, experiment_dir, '{}.png'.format(ARCHITECTURE))
-            # tf.keras.utils.plot_model(
-            #     model.encoder, to_file=encoder_architecture_path, show_shapes=True, expand_nested=True)
 
             # Save experiement config
             experiment_config = os.path.join(
@@ -366,8 +361,6 @@ if __name__ == "__main__":
 
         if GENERATE_EMBEDDINGS_REPORT:
             dataframe = pd.DataFrame(embeddings)
-            # dataframe = (dataframe - dataframe.min()) / \
-            #     (dataframe.max() - dataframe.min())
 
             pandas_profiler_config_path = os.path.join(
                 os.getcwd(), "pandas_profiler_config.yaml")
