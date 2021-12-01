@@ -3,7 +3,6 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Model, layers
-from tensorflow.python.keras.engine import training
 
 
 class RandomColorAffine(Model):
@@ -193,7 +192,7 @@ class SimCLR(Model):
             self.test_tracker_contrastive_accuracy
         ]
 
-    def contrastive_loss(self, projections_1, projections_2, training):
+    def contrastive_loss(self, projections_1, projections_2):
         # InfoNCE loss (information noise-contrastive estimation)
         # NT-Xent loss (normalized temperature-scaled cross entropy)
 
@@ -211,19 +210,6 @@ class SimCLR(Model):
         batch_size = tf.shape(projections_1)[0]
         contrastive_labels = tf.range(batch_size)
 
-        if training:
-            self.training_tracker_contrastive_accuracy.update_state(
-                contrastive_labels, similarities)
-            self.training_tracker_contrastive_accuracy.update_state(
-                contrastive_labels, tf.transpose(similarities)
-            )
-        else:
-            self.test_tracker_contrastive_accuracy.update_state(
-                contrastive_labels, similarities)
-            self.test_tracker_contrastive_accuracy.update_state(
-                contrastive_labels, tf.transpose(similarities)
-            )
-
         # The temperature-scaled similarities are used as logits for cross-entropy
         # a symmetrized version of the loss is used here
         loss_1_2 = tf.keras.losses.sparse_categorical_crossentropy(
@@ -233,7 +219,9 @@ class SimCLR(Model):
             contrastive_labels, tf.transpose(similarities), from_logits=True
         )
 
-        return (loss_1_2 + loss_2_1) / 2
+        contrastive_loss = (loss_1_2 + loss_2_1) / 2
+
+        return contrastive_labels, similarities, contrastive_loss
 
     def call(self, inputs, training=False):
         augmented = self.contrastive_augmenter(inputs, training)
@@ -251,8 +239,8 @@ class SimCLR(Model):
 
             projections_1 = self.projection_head(features_1)
             projections_2 = self.projection_head(features_2)
-            contrastive_loss = self.contrastive_loss(
-                projections_1, projections_2, training=True)
+            contrastive_labels, similarities, contrastive_loss = self.contrastive_loss(
+                projections_1, projections_2)
 
         gradients = tape.gradient(
             contrastive_loss,
@@ -267,6 +255,12 @@ class SimCLR(Model):
 
         self.training_tracker_contrastive_loss.update_state(contrastive_loss)
 
+        self.training_tracker_contrastive_accuracy.update_state(
+            contrastive_labels, similarities)
+        self.training_tracker_contrastive_accuracy.update_state(
+            contrastive_labels, tf.transpose(similarities)
+        )
+
         return {
             "contrastive_loss": self.training_tracker_contrastive_loss.result(),
             "contrastive_accuracy": self.training_tracker_contrastive_accuracy.result()
@@ -280,10 +274,16 @@ class SimCLR(Model):
 
         projections_1 = self.projection_head(features_1)
         projections_2 = self.projection_head(features_2)
-        contrastive_loss = self.contrastive_loss(
-            projections_1, projections_2, training=False)
+        contrastive_labels, similarities, contrastive_loss = self.contrastive_loss(
+            projections_1, projections_2)
 
         self.test_tracker_contrastive_loss.update_state(contrastive_loss)
+
+        self.test_tracker_contrastive_accuracy.update_state(
+            contrastive_labels, similarities)
+        self.test_tracker_contrastive_accuracy.update_state(
+            contrastive_labels, tf.transpose(similarities)
+        )
 
         return {
             "contrastive_loss": self.test_tracker_contrastive_loss.result(),
