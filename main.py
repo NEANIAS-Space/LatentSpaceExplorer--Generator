@@ -184,12 +184,13 @@ if __name__ == "__main__":
                     image_dim=IMAGE_DIM,
                     channels_num=CHANNELS_NUM,
                     latent_dim=LATENT_DIM,
-                    filters=FILTERS
+                    filters=FILTERS,
+                    temperature=0.1
                 )
 
                 model.compile(
                     optimizer=OPTIMIZER,
-                    learning_rate=LEARNING_RATE
+                    learning_rate=LEARNING_RATE,
                 )
 
             # Create model dir
