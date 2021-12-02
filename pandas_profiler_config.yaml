@@ -90,7 +90,7 @@ correlations:
       threshold: 0.9
     spearman:
       calculate: true
-      warn_high_correlations: true
+      warn_high_correlations: false
       threshold: 0.9
     kendall:
       calculate: false
