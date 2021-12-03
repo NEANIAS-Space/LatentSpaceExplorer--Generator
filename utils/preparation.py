@@ -64,7 +64,7 @@ def preparation(data_dir, image_format, channels_map):
     elif image_format == "image":
         print('Converting image files into numpy files...')
 
-        data = ImageDataGenerator(data_input_dir)
+        data = ImageDataGenerator(data_input_dir, channels_map)
 
         for item in tqdm(data):
             image_name, image = item

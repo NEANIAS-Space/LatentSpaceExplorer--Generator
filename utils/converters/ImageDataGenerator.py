@@ -4,8 +4,9 @@ import numpy as np
 
 
 class ImageDataGenerator:
-    def __init__(self, input_dir):
+    def __init__(self, input_dir, channels_map):
 
+        self.channels_map = channels_map
         allowed_extensions = ['.png', '.jpg', '.jpeg']
 
         # get all images from input folder
@@ -33,8 +34,16 @@ class ImageDataGenerator:
 
         image_path = self.images_paths[self.image_id]
 
-        image = Image.open(image_path).convert('RGB')
-        image = np.array(image, dtype=np.float32)
+        image = Image.open(image_path)
+
+        if len(self.channels_map) > 1:
+            image = image.convert('RGB')
+            image = np.array(image, dtype=np.float32)
+
+        else:
+            image.convert('L')
+            image = np.array(image, dtype=np.float32)
+            image = np.expand_dims(image, axis=-1)
 
         image_name = '{}.npy'.format(
             os.path.splitext(os.path.basename(image_path))[0])
