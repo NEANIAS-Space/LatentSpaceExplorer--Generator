@@ -16,20 +16,25 @@ class RandomColorAffine(Model):
 
         if training:
             batch_size = tf.shape(images)[0]
+            channels_num = tf.shape(images)[-1]
 
             # Same for all colors
             brightness_scales = 1 + tf.random.uniform(
                 (batch_size, 1, 1, 1), minval=-self.brightness, maxval=self.brightness
             )
+
             # Different for all colors
             jitter_matrices = tf.random.uniform(
-                (batch_size, 1, 3, 3), minval=-self.jitter, maxval=self.jitter
+                (batch_size, 1, channels_num, channels_num),
+                minval=-self.jitter, maxval=self.jitter
             )
 
             color_transforms = (
-                tf.eye(3, batch_shape=[batch_size, 1]) * brightness_scales
-                + jitter_matrices
+                tf.eye(
+                    channels_num, batch_shape=[batch_size, 1]
+                ) * brightness_scales + jitter_matrices
             )
+
             images = tf.clip_by_value(
                 tf.matmul(images, color_transforms), 0, 1)
 
@@ -138,7 +143,7 @@ class SimCLR(Model):
         self.best_loss = np.inf
 
         contrastive_augmentation = {
-            "min_area": 0.25, "brightness": 0.6, "jitter": 0.2}
+            "min_area": 0.5, "brightness": 0.6, "jitter": 0.2}
 
         encoder_input_shape = (None, image_dim, image_dim, channels_num)
         projection_head_input_shape = (None, latent_dim)
@@ -339,7 +344,7 @@ class SimCLR(Model):
                 train_image, training=True)
             predicted_channels = tf.transpose(augmented_1, perm=[3, 1, 2, 0])
             tf.summary.image(
-                "Images/Train/Projection 1",
+                "Images/Train/Augmented 1",
                 predicted_channels,
                 step=epoch,
                 max_outputs=self.channels_num
@@ -349,7 +354,7 @@ class SimCLR(Model):
                 train_image, training=True)
             predicted_channels = tf.transpose(augmented_2, perm=[3, 1, 2, 0])
             tf.summary.image(
-                "Images/Train/Projection 2",
+                "Images/Train/Augmented 2",
                 predicted_channels,
                 step=epoch,
                 max_outputs=self.channels_num
@@ -368,7 +373,7 @@ class SimCLR(Model):
             augmented_1 = self.contrastive_augmenter(test_image, training=True)
             predicted_channels = tf.transpose(augmented_1, perm=[3, 1, 2, 0])
             tf.summary.image(
-                "Images/Test/Projection 1",
+                "Images/Test/Augmented 1",
                 predicted_channels,
                 step=epoch,
                 max_outputs=self.channels_num
@@ -377,7 +382,7 @@ class SimCLR(Model):
             augmented_2 = self.contrastive_augmenter(test_image, training=True)
             predicted_channels = tf.transpose(augmented_2, perm=[3, 1, 2, 0])
             tf.summary.image(
-                "Images/Test/Projection 2",
+                "Images/Test/Augmented 2",
                 predicted_channels,
                 step=epoch,
                 max_outputs=self.channels_num
