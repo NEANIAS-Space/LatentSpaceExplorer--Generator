@@ -241,8 +241,9 @@ if __name__ == "__main__":
         generated_dir = os.path.join(experiment_dir, 'generated')
         reductions_dir = os.path.join(experiment_dir, 'reductions')
         clusters_dir = os.path.join(experiment_dir, 'clusters')
-        embeddings_path = os.path.join(experiment_dir, 'embeddings.json')
         metadata_path = os.path.join(experiment_dir, 'metadata.json')
+        embeddings_path = os.path.join(experiment_dir, 'embeddings.json')
+        ids_path = os.path.join(experiment_dir, 'ids.json')
         labels_path = os.path.join(experiment_dir, 'labels.json')
 
         os.makedirs(experiment_dir)
@@ -251,14 +252,17 @@ if __name__ == "__main__":
         os.makedirs(reductions_dir)
         os.makedirs(clusters_dir)
 
-        experiment_config_file = os.path.join(
+        experiment_config_path = os.path.join(
             MODELS_DIR, experiment, 'config.json')
-        with open(experiment_config_file) as f:
+        with open(experiment_config_path) as f:
             experiment_config = json.load(f)
 
-        input_labels_path = os.path.join(DATA_DIR, 'labels.json')
-        with open(input_labels_path) as f:
-            input_labels = json.load(f)
+        input_labels = []
+        input_labels_path = os.path.join(
+            DATA_DIR, 'labels.json')
+        if os.path.isfile(input_labels_path):
+            with open(input_labels_path) as f:
+                input_labels = json.load(f)
 
         IMAGE_DIM = experiment_config['image']['dim']
         NORMALIZATION_TYPE = experiment_config['preprocessing']['normalization_type']
@@ -292,7 +296,7 @@ if __name__ == "__main__":
         model = tf.keras.models.load_model(model_path)
 
         embeddings = []
-        labels = []
+        ids = []
 
         for i, data in enumerate(tqdm(dataset)):
             file, image = data
@@ -327,12 +331,7 @@ if __name__ == "__main__":
             embedding = model.predict(image)[0]
             embeddings.append(embedding.tolist())
 
-            label = {}
-            label['file_name'] = image_name
-            if input_labels:
-                label.update(input_labels[i])
-
-            labels.append(label)
+            ids.append(image_name)
 
             if SAVE_GENERATED_IMAGES:
                 generated = model(image, training=True)[0]
@@ -343,14 +342,17 @@ if __name__ == "__main__":
                     data_format="channels_last"
                 )
 
-        with open(embeddings_path, 'w+') as f:
-            json.dump(embeddings, f)
-
         with open(metadata_path, 'w+') as f:
             json.dump(experiment_config, f)
 
+        with open(embeddings_path, 'w+') as f:
+            json.dump(embeddings, f)
+
+        with open(ids_path, 'w+') as f:
+            json.dump(ids, f)
+
         with open(labels_path, 'w+') as f:
-            json.dump(labels, f)
+            json.dump(input_labels, f)
 
         clusters_gitkeep_path = os.path.join(clusters_dir, ".gitkeep")
         with open(clusters_gitkeep_path, 'w+') as f:
