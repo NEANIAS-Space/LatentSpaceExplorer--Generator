@@ -243,7 +243,6 @@ if __name__ == "__main__":
         clusters_dir = os.path.join(experiment_dir, 'clusters')
         metadata_path = os.path.join(experiment_dir, 'metadata.json')
         embeddings_path = os.path.join(experiment_dir, 'embeddings.json')
-        ids_path = os.path.join(experiment_dir, 'ids.json')
         labels_path = os.path.join(experiment_dir, 'labels.json')
 
         os.makedirs(experiment_dir)
@@ -256,13 +255,6 @@ if __name__ == "__main__":
             MODELS_DIR, experiment, 'config.json')
         with open(experiment_config_path) as f:
             experiment_config = json.load(f)
-
-        input_labels = []
-        input_labels_path = os.path.join(
-            DATA_DIR, 'labels.json')
-        if os.path.isfile(input_labels_path):
-            with open(input_labels_path) as f:
-                input_labels = json.load(f)
 
         IMAGE_DIM = experiment_config['image']['dim']
         NORMALIZATION_TYPE = experiment_config['preprocessing']['normalization_type']
@@ -348,11 +340,18 @@ if __name__ == "__main__":
         with open(embeddings_path, 'w+') as f:
             json.dump(embeddings, f)
 
-        with open(ids_path, 'w+') as f:
-            json.dump(ids, f)
+        labels = {"columns": [], "index": [], "data": []}
 
+        labels_path = os.path.join(DATA_DIR, 'labels.json')
+        if os.path.isfile(labels_path):
+            with open(labels_path) as f:
+                labels = json.load(f)
+
+        labels['columns'] = ids
+
+        labels_path = os.path.join(experiment_dir, 'labels.json')
         with open(labels_path, 'w+') as f:
-            json.dump(input_labels, f)
+            json.dump(labels, f)
 
         clusters_gitkeep_path = os.path.join(clusters_dir, ".gitkeep")
         with open(clusters_gitkeep_path, 'w+') as f:
