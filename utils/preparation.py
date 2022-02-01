@@ -5,6 +5,7 @@ from tqdm import tqdm
 
 
 from utils.converters.FitsDataGenerator import FitsDataGenerator
+from utils.converters.TifDataGenerator import TifDataGenerator
 from utils.converters.ImageDataGenerator import ImageDataGenerator
 
 
@@ -54,6 +55,17 @@ def preparation(data_dir, image_format, channels_map):
         print('Converting fits files into numpy files...')
 
         data = FitsDataGenerator(data_input_dir, channels_map)
+
+        for item in tqdm(data):
+            image_name, image = item
+            image_path = os.path.join(data_output_dir, image_name)
+            np.save(image_path, image)
+
+    # Process image files
+    elif image_format == "tif":
+        print('Converting tif files into numpy files...')
+
+        data = TifDataGenerator(data_input_dir, channels_map)
 
         for item in tqdm(data):
             image_name, image = item

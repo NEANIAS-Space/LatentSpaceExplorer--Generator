@@ -72,6 +72,7 @@ tensorflow-datasets==4.4.0
 tensorflow-estimator==2.6.0
 tensorflow-metadata==1.2.0
 termcolor==1.1.0
+tifffile==2020.9.3
 toml==0.10.2
 tqdm==4.62.3
 typeguard==2.12.1
