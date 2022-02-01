@@ -1,5 +1,3 @@
-# https://github.com/keras-team/keras-io/blob/master/examples/vision/semisupervised_simclr.py\
-
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Model, layers
