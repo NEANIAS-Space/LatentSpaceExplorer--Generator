@@ -20,8 +20,13 @@ from utils.preprocessing import tf_numpy_load, tf_preprocessing
 from utils.augmentation import tf_augmentation
 
 from architectures.cae import CAE
+from architectures.scae import SCAE
 from architectures.cvae import CVAE
 from architectures.simclr import SimCLR
+
+
+print('TensorFlow version: ', tf.__version__)
+print('Devices', tf.config.list_physical_devices())
 
 
 # Structure
@@ -153,6 +158,20 @@ if __name__ == "__main__":
             # Model
             if ARCHITECTURE == "cae":
                 model = CAE(
+                    image_dim=IMAGE_DIM,
+                    channels_num=CHANNELS_NUM,
+                    latent_dim=LATENT_DIM,
+                    filters=FILTERS
+                )
+
+                model.compile(
+                    optimizer=OPTIMIZER,
+                    learning_rate=LEARNING_RATE,
+                    loss=LOSS
+                )
+
+            if ARCHITECTURE == "scae":
+                model = SCAE(
                     image_dim=IMAGE_DIM,
                     channels_num=CHANNELS_NUM,
                     latent_dim=LATENT_DIM,
