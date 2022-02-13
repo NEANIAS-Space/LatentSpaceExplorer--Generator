@@ -43,13 +43,11 @@ class TifDataGenerator:
             tif_channels = np.array([page.asarray() for page in tif.pages])
             tif_channels = np.squeeze(tif_channels, axis=0)
 
-        for tif_channel_id in range(tif_channels.shape[2]):
-            for channel_map in self.channels_map.keys():
+        for channel_map in self.channels_map.keys():
+            channel_index = self.channels_map[channel_map]
 
-                if int(tif_channel_id) == int(channel_map):
-                    channel_index = self.channels_map[channel_map]
-                    image[channel_index] = tif_channels[:,
-                                                        :, tif_channel_id].astype('float32')
+            image[int(channel_map)] = tif_channels[:, :,
+                                                   channel_index].astype('float32')
 
         image = np.dstack(image)
         image_name = '{}.npy'.format(
