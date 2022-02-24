@@ -170,7 +170,7 @@ if __name__ == "__main__":
                     loss=LOSS
                 )
 
-            if ARCHITECTURE == "scae":
+            elif ARCHITECTURE == "scae":
                 model = SCAE(
                     image_dim=IMAGE_DIM,
                     channels_num=CHANNELS_NUM,
