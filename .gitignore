@@ -1,5 +1,6 @@
 .venv
 .vscode
+.devcontainer
 **/__pycache__
 
 data/labels.json
