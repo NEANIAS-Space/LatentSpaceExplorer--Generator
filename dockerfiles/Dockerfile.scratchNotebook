@@ -1,0 +1,82 @@
+FROM  jupyter/base-notebook:python-3.8.8
+
+# Set up user
+ARG NB_USER=jovyan
+#ARG NB_UID=1000
+ENV USER ${NB_USER}
+#ENV NB_UID ${NB_UID}
+ENV HOME /home/${NB_USER}
+
+#RUN adduser --disabled-password \
+#   --gecos "Default user" \
+#   --uid ${NB_UID} \
+#   ${NB_USER}
+
+USER root
+
+ENV TEMP_MRCNN_DIR /tmp/mrcnn
+ENV EXAMPLE_HOME /tmp/example_astroml
+#ENV PATH "{$PATH}:/mrcnn/bin"
+
+# ENV variables for python3 - see http://click.pocoo.org/5/python3/
+ENV LC_ALL C.UTF-8
+ENV LANG C.UTF-8
+
+# Silence Tensorflow warnings - look into compiling for CPU supported instruction sets
+ENV TF_CPP_MIN_LOG_LEVEL 2
+ENV PYTHONWARNINGS "ignore::DeprecationWarning:simplejson"
+
+RUN apt-get update
+RUN apt-get install git --yes
+RUN apt-get install gcc --yes
+
+RUN \
+    sed -i /etc/sudoers -re 's/^%sudo.*/%sudo ALL=(ALL:ALL) NOPASSWD: ALL/g' && \
+    sed -i /etc/sudoers -re 's/^root.*/root ALL=(ALL:ALL) NOPASSWD: ALL/g' && \
+    sed -i /etc/sudoers -re 's/^#includedir.*/## **Removed the include directive** ##/g' && \
+    echo "${NB_USER} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers && \
+    chmod g+w /etc/passwd
+
+#Mounting capabilities
+RUN sudo apt-get install curl --yes
+RUN sudo apt-get install fuse --yes
+RUN sudo apt-get install psmisc --yes
+RUN sudo apt-get install unzip --yes
+RUN curl https://rclone.org/install.sh | sudo bash
+COPY webdav_mount.sh /usr/bin/webdav_mount.sh
+COPY webdav_umount.sh /usr/bin/webdav_umount.sh
+
+COPY requirements.txt .
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
+
+#RUN pip install --upgrade pip
+#RUN pip install --upgrade imgaug
+#RUN pip install --upgrade pillow
+#RUN pip install tensorflow==1.13.2
+#RUN pip install keras==2.3.0
+#RUN pip install opencv-python-headless
+#RUN pip install ipython
+#RUN pip install 'h5py<3.0.0'
+
+# NOTE: cloning master (might be an unstable HEAD)
+#RUN git clone https://github.com/SKA-INAF/mrcnn.git $TEMP_MRCNN_DIR
+#RUN cd $TEMP_MRCNN_DIR && \
+#    python3 setup.py sdist bdist_wheel && \
+#    python3 setup.py build && \
+#    python3 setup.py install
+
+#COPY copy_example.sh /copy_example.sh.tmp
+#RUN sed "s|DIR-OF-EXAMPLES|${EXAMPLE_HOME}|g" /copy_example.sh.tmp > /copy_example.sh
+#RUN rm -f /copy_example.sh.tmp
+#RUN chmod a+x /copy_example.sh
+#RUN chown -R jovyan:users /copy_example.sh
+
+#COPY data_mrcnn/ $EXAMPLE_HOME/
+#RUN chown -R jovyan:users $EXAMPLE_HOME
+#RUN export PATH=$PATH:~/.local/bin
+
+USER ${NB_USER}
+WORKDIR $HOME
+
+CMD ["jupyter", "notebook", "--allow-root"]
