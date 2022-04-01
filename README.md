@@ -2,11 +2,30 @@
 
 This repository implements a Machine Learning pipeline that produces latent space to be explored in the projector lse.neanias.eu.
 
+```mermaid
+graph TD;
+    subgraph LSE [Latent Space Explorer]
+        CS[(Cloud Storage)]
+        LSG[LS Generator]
+        LSP[LS Projector]
+        LSG-->CS;
+        CS-->LSP;
+        LSP-->CS;
+    end
+
+    subgraph Generator [Latent Space Generator]
+        Preparation-->Preprocessing;
+        Preprocessing & Augmentation-->Training;
+        Training-->Inference;
+    end
+```
+
+
 Full detailed pipeline info will be available in specific readme:
 
 -   [Data preparation](./docs/PREPARATION.md)
 -   [Data preprocessing](./docs/PREPROCESSING.md)
--   [Data Augmentation](./docs/AREPROCESSING.md)
+-   [Data Augmentation](./docs/AUGMENTATION.md)
 -   [Training](./docs/TRAINING.md)
 -   [Inference](./docs/INFERENCE.md)
 
@@ -18,7 +37,7 @@ Here follows a quick start guide to go quick in a working example.
 
 1. Download or clone the code
 
-    ```
+    ```bash
     git clone git@gitlab.neanias.eu:s3-service/latent-space-explorer/generator.git
     ```
 
@@ -26,7 +45,7 @@ Here follows a quick start guide to go quick in a working example.
 
     - pip env
 
-        ```
+        ```bash
         python -m venv .venv
         source /.venv/bin/activate
         pip install -r requirements.txt
@@ -34,7 +53,7 @@ Here follows a quick start guide to go quick in a working example.
 
     - docker image
 
-        ```
+        ```bash
         docker run -it -p 6006:6006 --gpus=all -v $PWD:/workdir dr4thmos/lsg-gpu:0.1
         ```
 
@@ -62,20 +81,18 @@ Here follows a quick start guide to go quick in a working example.
 
 2. Describe your input in the config.json file image section
 
-    ```
+    ```json
     "image": {
         "format": "fits",
         "dim": 32,
         "channels": {
         "map": {
-            {
-                "survey_band1-name": 2,
-                "survey_band2-name": 0,
-                "survey_band3-name": 1,
-                "survey_band4-name": 3,
-                "survey_band5-name": 4,
-                "survey_band6-name": 4
-            }
+            "survey_band1-name": 2,
+            "survey_band2-name": 0,
+            "survey_band3-name": 1,
+            "survey_band4-name": 3,
+            "survey_band5-name": 4,
+            "survey_band6-name": 4
         },
             "preview": {
                 "r": 4,
@@ -98,13 +115,13 @@ Here follows a quick start guide to go quick in a working example.
 
 2. Start the training
 
-    ```
+    ```bash
     python main.py training
     ```
 
 3. Start tensorboard to monitor the training
 
-    ```
+    ```bash
     tensorboard --logdir logs
     ```
 
