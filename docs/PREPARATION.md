@@ -1,5 +1,5 @@
 # Data preparation
-The preparation step transforms the original data into the NPY file format by constructing a multidimensional matrix W x H x C, where W and H are the original image dimensions and C is the chosen number of channels. Through the configuration file you can choose the order of the channels in the output file.
+The preparation step transforms the original data into the NPY file format by constructing a multidimensional matrix W x H x C, where W and H are the original image dimensions and C is the chosen number of channels. Through the configuration file you can choose the number and the order of the channels in the output file.
 
 The LSG script supports the following input formats: FITS, TIF, PNG, JPG, JPEG, NPY.
 
