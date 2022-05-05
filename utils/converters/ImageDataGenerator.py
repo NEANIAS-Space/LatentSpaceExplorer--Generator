@@ -1,5 +1,5 @@
 import os
-from PIL import Image
+from PIL import Image, ImageOps
 import numpy as np
 
 
@@ -36,14 +36,17 @@ class ImageDataGenerator:
 
         image = Image.open(image_path)
 
-        if len(self.channels_map) > 1:
+        if len(self.channels_map) == 3:
             image = image.convert('RGB')
             image = np.array(image, dtype=np.float32)
 
-        else:
-            image.convert('L')
+        elif len(self.channels_map) == 1:
+            #image.convert('L')
+            image = ImageOps.grayscale(image)
             image = np.array(image, dtype=np.float32)
+            print(image.shape)
             image = np.expand_dims(image, axis=-1)
+            print(image.shape)
 
         image_name = '{}.npy'.format(
             os.path.splitext(os.path.basename(image_path))[0])

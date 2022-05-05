@@ -1,0 +1,59 @@
+[
+    {
+        "name": "example",
+        "image": {
+            "format": "image",
+            "dim": 28,
+            "channels": {
+                "map": {
+                    "channel1": 0
+                },
+                "preview": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                }
+            }
+        },
+        "dataset": {
+            "split_threshold": 0.8
+        },
+        "preprocessing": {
+            "normalization_type": "default"
+        },
+        "augmentation": {
+            "threshold": 0.7,
+            "flip_x": true,
+            "flip_y": true,
+            "rotate": {
+                "enabled": true,
+                "degrees": 45
+            },
+            "shift": {
+                "enabled": true,
+                "percentage": 10
+            }
+        },
+        "architecture": {
+            "name": "cae",
+            "filters": [
+                64,
+                128
+            ],
+            "latent_dim": 64
+        },
+        "training": {
+            "epochs": 10,
+            "batch_size": 64,
+            "optimizer": {
+                "name": "Adam",
+                "learning_rate": 0.003
+            },
+            "loss": "MeanSquaredError"
+        },
+        "inference": {
+            "save_generated_images": true,
+            "generate_embeddings_report": false
+        }
+    }
+]
