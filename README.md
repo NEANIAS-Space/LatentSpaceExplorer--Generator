@@ -22,12 +22,12 @@ Here follows a quick start guide to go quick in a working example.
 
     - docker with GPU
         ```
-        docker run -it --rm -p 6006:6006 --gpus=all -v $PWD:/workdir hackaton:0.2-gpu
+        docker run -it --rm -p 6006:6006 --gpus=all -v $PWD:/workdir dr4thmos/hackthescience2022:1.0-gpu
         ```
 
     - docker without GPU
         ```
-        docker run -it --rm -p 6006:6006 -v $PWD:/workdir hackaton:0.2
+        docker run -it --rm -p 6006:6006 -v $PWD:/workdir dr4thmos/hackthescience2022:1.0-gpu
         ```
 
     - Your own environment could be setup by install requirements.txt
